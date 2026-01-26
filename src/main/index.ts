@@ -686,45 +686,18 @@ async function initializeAgent(): Promise<void> {
       telegramBot = createTelegramBot();
 
       // Set up cross-channel sync: Telegram -> Desktop
+      // Only send to chat window if it's already open - don't force open or notify
       telegramBot.setOnMessageCallback((data) => {
-        console.log('[Main] Telegram message callback triggered, syncing to desktop');
-
-        // Show notification to confirm callback is working
-        showNotification('Telegram Message', `Received: ${data.userMessage.substring(0, 50)}`);
-
-        const messageData = {
-          userMessage: data.userMessage,
-          response: data.response,
-          chatId: data.chatId,
-        };
-
-        const sendToWindow = () => {
-          if (chatWindow && !chatWindow.isDestroyed()) {
-            console.log('[Main] Sending telegram:message IPC');
-            chatWindow.webContents.send('telegram:message', messageData);
-          }
-        };
-
-        // If chat window is open and loaded, send immediately
+        // Only sync to desktop UI if chat window is already open
         if (chatWindow && !chatWindow.isDestroyed()) {
-          console.log('[Main] Chat window exists, sending IPC');
-          sendToWindow();
-        } else {
-          // Open chat window and wait for it to fully load
-          console.log('[Main] Chat window not open, opening it');
-          openChatWindow();
-
-          // Wait for did-finish-load which fires after page JS has executed
-          if (chatWindow) {
-            chatWindow.webContents.once('did-finish-load', () => {
-              console.log('[Main] Chat window loaded, sending telegram:message IPC');
-              // Small additional delay to ensure DOMContentLoaded handlers have run
-              setTimeout(sendToWindow, 200);
-            });
-          }
+          chatWindow.webContents.send('telegram:message', {
+            userMessage: data.userMessage,
+            response: data.response,
+            chatId: data.chatId,
+          });
         }
+        // Messages are already saved to SQLite, so they'll appear when user opens chat
       });
-      console.log('[Main] Telegram onMessageCallback set');
 
       await telegramBot.start();
 

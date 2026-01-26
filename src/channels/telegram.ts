@@ -399,7 +399,6 @@ export class TelegramBot extends BaseChannel {
 
     // Handle /testhtml command - for debugging HTML formatting
     this.bot.command('testhtml', async (ctx) => {
-      console.log('[Telegram] /testhtml command received!');
       const testHtml = `<b>Bold text</b>
 <i>Italic text</i>
 <u>Underline text</u>
@@ -417,13 +416,11 @@ multiline</pre>
 
       try {
         await ctx.reply(testHtml, { parse_mode: 'HTML' });
-        console.log('[Telegram] Test HTML sent successfully');
       } catch (error) {
         console.error('[Telegram] Test HTML failed:', error);
         await ctx.reply('HTML test failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
       }
     });
-    console.log('[Telegram] /testhtml command handler registered');
 
     // Handle all text messages
     this.bot.on('message:text', async (ctx: Context) => {
@@ -431,7 +428,6 @@ multiline</pre>
       const chatId = ctx.chat?.id;
       if (!message || !chatId) return;
 
-      console.log('[Telegram] message:text handler received:', message.substring(0, 50));
 
       // Show typing indicator
       await ctx.replyWithChatAction('typing');
@@ -450,17 +446,13 @@ multiline</pre>
         await this.sendResponse(ctx, result.response);
 
         // Notify callback for cross-channel sync (to desktop)
-        console.log('[Telegram] Checking onMessageCallback:', !!this.onMessageCallback);
         if (this.onMessageCallback) {
-          console.log('[Telegram] Calling onMessageCallback for cross-channel sync');
           this.onMessageCallback({
             userMessage: message,
             response: result.response,
             channel: 'telegram',
             chatId,
           });
-        } else {
-          console.log('[Telegram] No onMessageCallback set!');
         }
 
         // If compaction happened, notify
@@ -490,12 +482,8 @@ multiline</pre>
 
     if (text.length <= MAX_LENGTH) {
       const html = markdownToTelegramHtml(text);
-      console.log('[Telegram] Original text length:', text.length);
-      console.log('[Telegram] HTML text length:', html.length);
-      console.log('[Telegram] HTML preview:', html.substring(0, 500));
       try {
         await ctx.reply(html, { parse_mode: 'HTML' });
-        console.log('[Telegram] HTML send successful');
       } catch (error) {
         // Fallback to plain text if HTML parsing fails
         console.error('[Telegram] HTML parse failed, falling back to plain text:', error);
@@ -510,9 +498,8 @@ multiline</pre>
       const html = markdownToTelegramHtml(prefix + chunks[i]);
       try {
         await ctx.reply(html, { parse_mode: 'HTML' });
-      } catch (error) {
+      } catch {
         // Fallback to plain text if HTML parsing fails
-        console.warn('[Telegram] HTML parse failed, falling back to plain text');
         await ctx.reply(prefix + chunks[i]);
       }
       // Small delay between messages to maintain order
