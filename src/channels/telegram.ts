@@ -428,7 +428,6 @@ multiline</pre>
       const chatId = ctx.chat?.id;
       if (!message || !chatId) return;
 
-
       // Show typing indicator
       await ctx.replyWithChatAction('typing');
 
@@ -439,8 +438,6 @@ multiline</pre>
 
       try {
         const result = await AgentManager.processMessage(message, 'telegram');
-
-        clearInterval(typingInterval);
 
         // Send response, splitting if necessary
         await this.sendResponse(ctx, result.response);
@@ -460,10 +457,12 @@ multiline</pre>
           await ctx.reply('📦 (Conversation history was compacted to save space)');
         }
       } catch (error) {
-        clearInterval(typingInterval);
         console.error('[Telegram] Error:', error);
         const errorMsg = error instanceof Error ? error.message : 'Unknown error';
         await ctx.reply(`❌ Error: ${errorMsg}`);
+      } finally {
+        // Always clear the typing interval to prevent leaks
+        clearInterval(typingInterval);
       }
     });
 

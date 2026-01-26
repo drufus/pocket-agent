@@ -8,6 +8,10 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 
+// Shared database connection (singleton pattern for connection pooling)
+let sharedDb: Database.Database | null = null;
+let dbInitialized = false;
+
 function getDbPath(): string {
   const homeDir = process.env.HOME || process.env.USERPROFILE || '';
   const possiblePaths = [
@@ -19,6 +23,46 @@ function getDbPath(): string {
     if (fs.existsSync(p)) return p;
   }
   return possiblePaths[0];
+}
+
+/**
+ * Get shared database connection (creates if needed)
+ */
+function getDb(): Database.Database | null {
+  const dbPath = getDbPath();
+  if (!fs.existsSync(dbPath)) {
+    return null;
+  }
+
+  if (sharedDb && !dbInitialized) {
+    ensureTable(sharedDb);
+    dbInitialized = true;
+    return sharedDb;
+  }
+
+  if (sharedDb) {
+    return sharedDb;
+  }
+
+  sharedDb = new Database(dbPath);
+  ensureTable(sharedDb);
+  dbInitialized = true;
+  return sharedDb;
+}
+
+/**
+ * Close the shared database connection (call on app shutdown)
+ */
+export function closeCalendarDb(): void {
+  if (sharedDb) {
+    try {
+      sharedDb.close();
+    } catch {
+      // Ignore close errors
+    }
+    sharedDb = null;
+    dbInitialized = false;
+  }
 }
 
 function parseDateTime(input: string): string | null {
@@ -169,31 +213,24 @@ export async function handleCalendarAddTool(input: unknown): Promise<string> {
   const reminderMinutes = params.reminder_minutes ?? 15;
   const channel = params.channel || 'desktop';
 
-  const dbPath = getDbPath();
-  if (!fs.existsSync(dbPath)) {
+  const db = getDb();
+  if (!db) {
     return JSON.stringify({ error: 'Database not found. Start Pocket Agent first.' });
   }
 
-  const db = new Database(dbPath);
-  try {
-    ensureTable(db);
+  const result = db.prepare(`
+    INSERT INTO calendar_events (title, description, start_time, end_time, location, reminder_minutes, channel)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(params.title, params.description || null, startTime, endTime, params.location || null, reminderMinutes, channel);
 
-    const result = db.prepare(`
-      INSERT INTO calendar_events (title, description, start_time, end_time, location, reminder_minutes, channel)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(params.title, params.description || null, startTime, endTime, params.location || null, reminderMinutes, channel);
-
-    return JSON.stringify({
-      success: true,
-      id: result.lastInsertRowid,
-      title: params.title,
-      start_time: formatDateTime(startTime),
-      reminder_minutes: reminderMinutes,
-      channel,
-    });
-  } finally {
-    db.close();
-  }
+  return JSON.stringify({
+    success: true,
+    id: result.lastInsertRowid,
+    title: params.title,
+    start_time: formatDateTime(startTime),
+    reminder_minutes: reminderMinutes,
+    channel,
+  });
 }
 
 // ============================================================================
@@ -222,56 +259,49 @@ Examples:
 export async function handleCalendarListTool(input: unknown): Promise<string> {
   const params = input as { date?: string };
 
-  const dbPath = getDbPath();
-  if (!fs.existsSync(dbPath)) {
+  const db = getDb();
+  if (!db) {
     return JSON.stringify({ error: 'Database not found' });
   }
 
-  const db = new Database(dbPath);
-  try {
-    ensureTable(db);
+  let query = 'SELECT * FROM calendar_events WHERE 1=1';
+  const queryParams: string[] = [];
 
-    let query = 'SELECT * FROM calendar_events WHERE 1=1';
-    const queryParams: string[] = [];
+  if (params.date) {
+    const filterDate =
+      params.date.toLowerCase() === 'today'
+        ? new Date().toISOString().split('T')[0]
+        : params.date.toLowerCase() === 'tomorrow'
+          ? new Date(Date.now() + 86400000).toISOString().split('T')[0]
+          : params.date;
 
-    if (params.date) {
-      const filterDate =
-        params.date.toLowerCase() === 'today'
-          ? new Date().toISOString().split('T')[0]
-          : params.date.toLowerCase() === 'tomorrow'
-            ? new Date(Date.now() + 86400000).toISOString().split('T')[0]
-            : params.date;
-
-      query += ' AND date(start_time) = date(?)';
-      queryParams.push(filterDate);
-    }
-
-    query += ' ORDER BY start_time ASC';
-
-    const events = db.prepare(query).all(...queryParams) as Array<{
-      id: number;
-      title: string;
-      start_time: string;
-      end_time: string | null;
-      location: string | null;
-      reminder_minutes: number;
-    }>;
-
-    return JSON.stringify({
-      success: true,
-      count: events.length,
-      events: events.map(e => ({
-        id: e.id,
-        title: e.title,
-        start: formatDateTime(e.start_time),
-        end: e.end_time ? formatDateTime(e.end_time) : null,
-        location: e.location,
-        reminder: `${e.reminder_minutes} min before`,
-      })),
-    });
-  } finally {
-    db.close();
+    query += ' AND date(start_time) = date(?)';
+    queryParams.push(filterDate);
   }
+
+  query += ' ORDER BY start_time ASC';
+
+  const events = db.prepare(query).all(...queryParams) as Array<{
+    id: number;
+    title: string;
+    start_time: string;
+    end_time: string | null;
+    location: string | null;
+    reminder_minutes: number;
+  }>;
+
+  return JSON.stringify({
+    success: true,
+    count: events.length,
+    events: events.map(e => ({
+      id: e.id,
+      title: e.title,
+      start: formatDateTime(e.start_time),
+      end: e.end_time ? formatDateTime(e.end_time) : null,
+      location: e.location,
+      reminder: `${e.reminder_minutes} min before`,
+    })),
+  });
 }
 
 // ============================================================================
@@ -300,43 +330,36 @@ export async function handleCalendarUpcomingTool(input: unknown): Promise<string
   const params = input as { hours?: number };
   const hours = params.hours ?? 24;
 
-  const dbPath = getDbPath();
-  if (!fs.existsSync(dbPath)) {
+  const db = getDb();
+  if (!db) {
     return JSON.stringify({ error: 'Database not found' });
   }
 
-  const db = new Database(dbPath);
-  try {
-    ensureTable(db);
+  const now = new Date();
+  const later = new Date(now.getTime() + hours * 3600000);
 
-    const now = new Date();
-    const later = new Date(now.getTime() + hours * 3600000);
+  const events = db.prepare(`
+    SELECT * FROM calendar_events
+    WHERE start_time >= ? AND start_time <= ?
+    ORDER BY start_time ASC
+  `).all(now.toISOString(), later.toISOString()) as Array<{
+    id: number;
+    title: string;
+    start_time: string;
+    location: string | null;
+  }>;
 
-    const events = db.prepare(`
-      SELECT * FROM calendar_events
-      WHERE start_time >= ? AND start_time <= ?
-      ORDER BY start_time ASC
-    `).all(now.toISOString(), later.toISOString()) as Array<{
-      id: number;
-      title: string;
-      start_time: string;
-      location: string | null;
-    }>;
-
-    return JSON.stringify({
-      success: true,
-      hours,
-      count: events.length,
-      events: events.map(e => ({
-        id: e.id,
-        title: e.title,
-        start: formatDateTime(e.start_time),
-        location: e.location,
-      })),
-    });
-  } finally {
-    db.close();
-  }
+  return JSON.stringify({
+    success: true,
+    hours,
+    count: events.length,
+    events: events.map(e => ({
+      id: e.id,
+      title: e.title,
+      start: formatDateTime(e.start_time),
+      location: e.location,
+    })),
+  });
 }
 
 // ============================================================================
@@ -364,23 +387,16 @@ export async function handleCalendarDeleteTool(input: unknown): Promise<string> 
     return JSON.stringify({ error: 'id is required' });
   }
 
-  const dbPath = getDbPath();
-  if (!fs.existsSync(dbPath)) {
+  const db = getDb();
+  if (!db) {
     return JSON.stringify({ error: 'Database not found' });
   }
 
-  const db = new Database(dbPath);
-  try {
-    ensureTable(db);
-
-    const result = db.prepare('DELETE FROM calendar_events WHERE id = ?').run(params.id);
-    if (result.changes > 0) {
-      return JSON.stringify({ success: true, message: `Event ${params.id} deleted` });
-    } else {
-      return JSON.stringify({ success: false, error: `Event ${params.id} not found` });
-    }
-  } finally {
-    db.close();
+  const result = db.prepare('DELETE FROM calendar_events WHERE id = ?').run(params.id);
+  if (result.changes > 0) {
+    return JSON.stringify({ success: true, message: `Event ${params.id} deleted` });
+  } else {
+    return JSON.stringify({ success: false, error: `Event ${params.id} not found` });
   }
 }
 

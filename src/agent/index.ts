@@ -807,7 +807,9 @@ pty_exec(command="htop", timeout=30000)
     }
 
     // Computer use
-    if (inp.coordinate) return `at (${(inp.coordinate as number[])[0]}, ${(inp.coordinate as number[])[1]})`;
+    if (inp.coordinate && Array.isArray(inp.coordinate) && inp.coordinate.length >= 2) {
+      return `at (${inp.coordinate[0]}, ${inp.coordinate[1]})`;
+    }
     if (inp.text) return `"${(inp.text as string).slice(0, 40)}"`;
 
     return '';

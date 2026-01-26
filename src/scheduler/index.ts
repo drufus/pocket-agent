@@ -66,6 +66,7 @@ export class CronScheduler {
   private reminderInterval: ReturnType<typeof setInterval> | null = null;
   private lastJobCount: number = 0;
   private dbPath: string | null = null;
+  private isCheckingReminders: boolean = false; // Mutex to prevent overlapping checks
 
   constructor() {}
 
@@ -112,12 +113,22 @@ export class CronScheduler {
 
   /**
    * Check for calendar events and tasks that need reminders
+   * Uses mutex to prevent overlapping executions
    */
   private async checkReminders(): Promise<void> {
     if (!this.dbPath) return;
 
-    const db = new Database(this.dbPath);
+    // Mutex: prevent overlapping executions
+    if (this.isCheckingReminders) {
+      console.log('[Scheduler] Skipping reminder check - previous check still running');
+      return;
+    }
+
+    this.isCheckingReminders = true;
+    let db: Database.Database | null = null;
+
     try {
+      db = new Database(this.dbPath);
       const now = new Date();
 
       // Check calendar events
@@ -185,7 +196,15 @@ export class CronScheduler {
     } catch (error) {
       console.error('[Scheduler] Reminder check failed:', error);
     } finally {
-      db.close();
+      // Always release mutex and close DB
+      this.isCheckingReminders = false;
+      if (db) {
+        try {
+          db.close();
+        } catch {
+          // Ignore close errors
+        }
+      }
     }
   }
 
@@ -327,7 +346,11 @@ export class CronScheduler {
     if (type === 'cron' && schedule) {
       // Simple next cron calculation
       const parts = schedule.split(/\s+/);
-      if (parts.length !== 5) return null;
+      if (parts.length !== 5) {
+        console.warn(`[Scheduler] Invalid cron expression (expected 5 parts): "${schedule}"`);
+        // Return a fallback of 24 hours to prevent job from being permanently disabled
+        return new Date(now.getTime() + 86400000).toISOString();
+      }
 
       const [min, hour] = parts;
       const next = new Date(now);
@@ -343,7 +366,9 @@ export class CronScheduler {
       return next.toISOString();
     }
 
-    return null;
+    // Fallback for unknown schedule types - don't disable the job
+    console.warn(`[Scheduler] Unknown schedule type "${type}", defaulting to 24h interval`);
+    return new Date(now.getTime() + 86400000).toISOString();
   }
 
   /**

@@ -14,6 +14,26 @@ import * as os from 'os';
 import { SettingsManager } from '../settings';
 import { PermissionType, getMissingPermissions, isMacOS } from '../permissions/macos';
 
+/**
+ * Validate that a string is a safe identifier (binary name, package name, etc.)
+ * Prevents command injection by only allowing alphanumeric, hyphen, underscore, dot, @, /
+ * These cover valid package names for npm, brew, go, etc.
+ */
+function isSafeIdentifier(str: string): boolean {
+  // Allow: alphanumeric, hyphen, underscore, dot, @, / (for scoped packages and go modules)
+  // Max length 256 to prevent abuse
+  return /^[a-zA-Z0-9@._/-]+$/.test(str) && str.length <= 256 && !str.includes('..');
+}
+
+/**
+ * Escape shell argument for safe use in commands
+ * Uses single quotes and escapes any embedded single quotes
+ */
+function escapeShellArg(arg: string): string {
+  // Wrap in single quotes and escape any embedded single quotes
+  return `'${arg.replace(/'/g, "'\\''")}'`;
+}
+
 // Re-export PermissionType for external use
 export type { PermissionType } from '../permissions/macos';
 
@@ -171,27 +191,38 @@ function getAllBinPaths(): string[] {
  * Checks all known installation paths for package managers
  */
 export function isBinAvailable(bin: string): boolean {
-  if (PLATFORM === 'win32') {
-    try {
-      execSync(`where ${bin}`, { stdio: 'pipe' });
-      return true;
-    } catch {
-      // Also check common Windows paths
-      const appData = process.env.APPDATA || '';
-      const localAppData = process.env.LOCALAPPDATA || '';
-      const winPaths = [
-        `${appData}\\npm\\${bin}.cmd`,
-        `${appData}\\npm\\${bin}`,
-        `${localAppData}\\Programs\\Python\\Python*\\Scripts\\${bin}.exe`,
-      ];
-      for (const p of winPaths) {
-        if (fs.existsSync(p)) return true;
-      }
-      return false;
-    }
+  // Validate binary name to prevent command injection
+  if (!isSafeIdentifier(bin)) {
+    console.warn(`[Skills] Invalid binary name rejected: ${bin}`);
+    return false;
   }
 
-  // Check all known paths
+  if (PLATFORM === 'win32') {
+    // Check common Windows paths directly instead of using shell
+    const appData = process.env.APPDATA || '';
+    const localAppData = process.env.LOCALAPPDATA || '';
+    const winPaths = [
+      `${appData}\\npm\\${bin}.cmd`,
+      `${appData}\\npm\\${bin}.exe`,
+      `${appData}\\npm\\${bin}`,
+      `${localAppData}\\Microsoft\\WindowsApps\\${bin}.exe`,
+    ];
+    for (const p of winPaths) {
+      if (fs.existsSync(p)) return true;
+    }
+
+    // Check PATH directories
+    const pathDirs = (process.env.PATH || '').split(path.delimiter);
+    for (const dir of pathDirs) {
+      const fullPath = path.join(dir, bin);
+      if (fs.existsSync(fullPath) || fs.existsSync(fullPath + '.exe') || fs.existsSync(fullPath + '.cmd')) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Check all known paths (filesystem lookup, no shell execution)
   const allPaths = getAllBinPaths();
   for (const dir of allPaths) {
     const fullPath = path.join(dir, bin);
@@ -200,13 +231,16 @@ export function isBinAvailable(bin: string): boolean {
     }
   }
 
-  // Last resort: try which (may work if PATH is set correctly in shell)
-  try {
-    execSync(`which ${bin}`, { stdio: 'pipe' });
-    return true;
-  } catch {
-    return false;
+  // Check PATH directories directly instead of using 'which' shell command
+  const pathDirs = (process.env.PATH || '').split(path.delimiter);
+  for (const dir of pathDirs) {
+    const fullPath = path.join(dir, bin);
+    if (fs.existsSync(fullPath)) {
+      return true;
+    }
   }
+
+  return false;
 }
 
 /**
@@ -329,8 +363,11 @@ export async function installDependency(
         if (!hasHomebrew()) {
           return { success: false, error: 'Homebrew not installed' };
         }
+        if (!option.formula || !isSafeIdentifier(option.formula)) {
+          return { success: false, error: 'Invalid formula name' };
+        }
         log(`Installing ${option.formula} via Homebrew...`);
-        await execAsync(`brew install ${option.formula}`);
+        await execAsync(`brew install ${escapeShellArg(option.formula)}`);
         return { success: true };
       }
 
@@ -338,8 +375,11 @@ export async function installDependency(
         if (!hasHomebrew()) {
           return { success: false, error: 'Homebrew not installed' };
         }
+        if (!option.cask || !isSafeIdentifier(option.cask)) {
+          return { success: false, error: 'Invalid cask name' };
+        }
         log(`Installing ${option.cask} via Homebrew Cask...`);
-        await execAsync(`brew install --cask ${option.cask}`);
+        await execAsync(`brew install --cask ${escapeShellArg(option.cask)}`);
         return { success: true };
       }
 
@@ -347,8 +387,11 @@ export async function installDependency(
         if (!hasNode()) {
           return { success: false, error: 'Node.js/npm not installed' };
         }
+        if (!option.package || !isSafeIdentifier(option.package)) {
+          return { success: false, error: 'Invalid package name' };
+        }
         log(`Installing ${option.package} via npm...`);
-        await execAsync(`npm install -g ${option.package}`);
+        await execAsync(`npm install -g ${escapeShellArg(option.package)}`);
         return { success: true };
       }
 
@@ -356,8 +399,11 @@ export async function installDependency(
         if (!hasGo()) {
           return { success: false, error: 'Go not installed' };
         }
+        if (!option.module || !isSafeIdentifier(option.module)) {
+          return { success: false, error: 'Invalid module name' };
+        }
         log(`Installing ${option.module} via go install...`);
-        await execAsync(`go install ${option.module}`);
+        await execAsync(`go install ${escapeShellArg(option.module)}`);
         return { success: true };
       }
 
@@ -371,8 +417,11 @@ export async function installDependency(
             return { success: false, error: 'uv not installed and no way to install it' };
           }
         }
+        if (!option.package || !isSafeIdentifier(option.package)) {
+          return { success: false, error: 'Invalid package name' };
+        }
         log(`Installing ${option.package} via uv...`);
-        await execAsync(`uv tool install ${option.package}`);
+        await execAsync(`uv tool install ${escapeShellArg(option.package)}`);
         return { success: true };
       }
 
@@ -380,8 +429,11 @@ export async function installDependency(
         if (PLATFORM !== 'linux') {
           return { success: false, error: 'apt only available on Linux' };
         }
+        if (!option.package || !isSafeIdentifier(option.package)) {
+          return { success: false, error: 'Invalid package name' };
+        }
         log(`Installing ${option.package} via apt...`);
-        await execAsync(`sudo apt-get install -y ${option.package}`);
+        await execAsync(`sudo apt-get install -y ${escapeShellArg(option.package)}`);
         return { success: true };
       }
 

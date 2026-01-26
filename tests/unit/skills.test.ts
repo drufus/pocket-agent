@@ -227,21 +227,22 @@ describe('isBinAvailable', () => {
     expect(result).toBe(true);
   });
 
-  it('should return true when binary found via which command', () => {
-    mockExistsSync.mockReturnValue(false);
-    mockExecSync.mockImplementation((cmd: string) => {
-      if (cmd === 'which testbin') {
-        return '/usr/local/bin/testbin';
-      }
-      if (cmd === 'npm prefix -g') {
-        return '/usr/local';
-      }
-      throw new Error('not found');
+  it('should return true when binary found via PATH scanning', () => {
+    // Mock PATH to include a custom directory
+    const originalPath = process.env.PATH;
+    process.env.PATH = '/custom/path/bin:/usr/bin';
+
+    mockExistsSync.mockImplementation((p: string) => {
+      // Binary found in PATH directory
+      return p === '/custom/path/bin/testbin';
     });
 
     const result = isBinAvailable('testbin');
 
     expect(result).toBe(true);
+
+    // Restore PATH
+    process.env.PATH = originalPath;
   });
 
   it('should return false when binary is not found anywhere', () => {

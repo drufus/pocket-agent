@@ -625,11 +625,14 @@ export class MemoryManager {
       try {
         const queryEmbedding = await embed(query);
 
+        // Limit chunks to prevent loading entire table into memory
         const chunks = this.db.prepare(`
           SELECT c.fact_id, c.embedding, f.id, f.category, f.subject, f.content, f.created_at, f.updated_at
           FROM chunks c
           JOIN facts f ON c.fact_id = f.id
           WHERE c.embedding IS NOT NULL
+          ORDER BY c.created_at DESC
+          LIMIT 500
         `).all() as Array<{
           fact_id: number;
           embedding: Buffer;
@@ -643,6 +646,10 @@ export class MemoryManager {
 
         for (const chunk of chunks) {
           const chunkEmbedding = deserializeEmbedding(chunk.embedding);
+          // Validate embedding before computing similarity
+          if (!chunkEmbedding || chunkEmbedding.length === 0 || chunkEmbedding.length !== queryEmbedding.length) {
+            continue; // Skip invalid embeddings
+          }
           const similarity = cosineSimilarity(queryEmbedding, chunkEmbedding);
 
           const fact: Fact = {
@@ -906,27 +913,43 @@ export class MemoryManager {
     }
 
     // 2. Semantic connections (if embeddings available)
+    // Limit to prevent O(N²) explosion with many facts
+    const MAX_SEMANTIC_COMPARISONS = 200; // Max facts to compare for semantic links
     if (hasEmbeddings()) {
       try {
-        // Get all chunks with embeddings
+        // Get chunks with embeddings (limited for performance)
         const chunks = this.db.prepare(`
           SELECT c.fact_id, c.embedding
           FROM chunks c
           WHERE c.embedding IS NOT NULL
-        `).all() as Array<{ fact_id: number; embedding: Buffer }>;
+          ORDER BY c.created_at DESC
+          LIMIT ?
+        `).all(MAX_SEMANTIC_COMPARISONS) as Array<{ fact_id: number; embedding: Buffer }>;
 
         // Build fact ID to embedding map
         const factEmbeddings = new Map<number, number[]>();
         for (const chunk of chunks) {
-          factEmbeddings.set(chunk.fact_id, deserializeEmbedding(chunk.embedding));
+          const emb = deserializeEmbedding(chunk.embedding);
+          // Validate embedding
+          if (emb && emb.length > 0) {
+            factEmbeddings.set(chunk.fact_id, emb);
+          }
         }
 
         // Compare each pair of facts with embeddings
         const factIds = Array.from(factEmbeddings.keys());
-        for (let i = 0; i < factIds.length; i++) {
+        let comparisons = 0;
+        const MAX_COMPARISONS = 10000; // Cap total comparisons to prevent freeze
+
+        outer: for (let i = 0; i < factIds.length; i++) {
           const embA = factEmbeddings.get(factIds[i])!;
           for (let j = i + 1; j < factIds.length; j++) {
+            if (++comparisons > MAX_COMPARISONS) break outer;
+
             const embB = factEmbeddings.get(factIds[j])!;
+            // Validate lengths match
+            if (embA.length !== embB.length) continue;
+
             const similarity = cosineSimilarity(embA, embB);
 
             // Only link if similarity is strong enough (above 0.5)
@@ -942,6 +965,8 @@ export class MemoryManager {
 
     // 3. Keyword connections
     // Extract significant words from each fact
+    // Limit facts processed for keyword matching to prevent O(N²M) explosion
+    const MAX_KEYWORD_FACTS = 300;
     const COMMON_WORDS = new Set([
       'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'her', 'was', 'one',
       'our', 'out', 'has', 'have', 'been', 'this', 'that', 'they', 'from', 'with', 'will',
@@ -955,19 +980,26 @@ export class MemoryManager {
       return new Set(words.filter(w => !COMMON_WORDS.has(w)));
     };
 
+    // Only process limited facts for keyword matching
+    const factsToProcess = facts.slice(0, MAX_KEYWORD_FACTS);
     const factKeywords = new Map<number, Set<string>>();
-    for (const fact of facts) {
+    for (const fact of factsToProcess) {
       const keywords = extractKeywords(`${fact.subject} ${fact.content}`);
       factKeywords.set(fact.id, keywords);
     }
 
     // Find keyword overlaps between facts
     const factIds = Array.from(factKeywords.keys());
-    for (let i = 0; i < factIds.length; i++) {
+    let keywordComparisons = 0;
+    const MAX_KEYWORD_COMPARISONS = 15000; // Cap total comparisons
+
+    outer: for (let i = 0; i < factIds.length; i++) {
       const kwA = factKeywords.get(factIds[i])!;
       if (kwA.size === 0) continue;
 
       for (let j = i + 1; j < factIds.length; j++) {
+        if (++keywordComparisons > MAX_KEYWORD_COMPARISONS) break outer;
+
         const kwB = factKeywords.get(factIds[j])!;
         if (kwB.size === 0) continue;
 

@@ -270,16 +270,39 @@ async function handleNotify(args: Record<string, unknown>): Promise<string> {
   }
 }
 
+/**
+ * Escape a shell argument for safe use in shell commands
+ * Uses single quotes and escapes embedded single quotes
+ */
+function escapeShellArg(arg: string): string {
+  return `'${arg.replace(/'/g, "'\\''")}'`;
+}
+
+/**
+ * Validate that cwd is a safe path (no path traversal)
+ */
+function isValidCwd(cwd: string): boolean {
+  // Reject paths with .. to prevent path traversal
+  // Allow absolute paths and relative paths without traversal
+  return !cwd.includes('..') && !cwd.includes('\0');
+}
+
 // PTY execution
 async function handlePtyExec(args: Record<string, unknown>): Promise<string> {
   const command = args.command as string;
   const cwd = (args.cwd as string) || process.cwd();
   const timeout = (args.timeout as number) || 60000;
 
+  // Validate cwd to prevent path traversal
+  if (!isValidCwd(cwd)) {
+    return JSON.stringify({ success: false, error: 'Invalid working directory' });
+  }
+
   return new Promise((resolve) => {
     let output = '';
     const shell = os.platform() === 'win32' ? 'cmd.exe' : '/bin/bash';
-    const shellArgs = os.platform() === 'win32' ? ['/c', command] : ['-c', command];
+    // Escape command to prevent injection when concatenated
+    const shellArgs = os.platform() === 'win32' ? ['/c', command] : ['-c', escapeShellArg(command)];
 
     const child = spawn(shell, shellArgs, { cwd, stdio: ['pipe', 'pipe', 'pipe'] });
 
