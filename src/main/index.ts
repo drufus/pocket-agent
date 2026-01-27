@@ -1479,6 +1479,8 @@ app.whenReady().then(async () => {
     openSetupWindow();
   } else {
     await initializeAgent();
+    // Open chat window on launch so users see the app
+    openChatWindow();
   }
 
   // Periodic tray update
@@ -1487,6 +1489,11 @@ app.whenReady().then(async () => {
 
 app.on('window-all-closed', () => {
   // Keep running (tray app)
+});
+
+app.on('activate', () => {
+  // macOS: clicking Dock icon opens chat window
+  openChatWindow();
 });
 
 app.on('before-quit', async () => {
