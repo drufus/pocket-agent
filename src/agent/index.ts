@@ -95,8 +95,8 @@ class AgentManagerClass extends EventEmitter {
   private initialized: boolean = false;
   private identity: string = '';
   private instructions: string = '';
-  private currentAbortController: AbortController | null = null;
-  private isProcessing: boolean = false;
+  private abortControllersBySession: Map<string, AbortController> = new Map();
+  private processingBySession: Map<string, boolean> = new Map();
   private lastSuggestedPrompt: string | undefined = undefined;
 
   private constructor() {
@@ -155,12 +155,13 @@ class AgentManagerClass extends EventEmitter {
       throw new Error('AgentManager not initialized - call initialize() first');
     }
 
-    if (this.isProcessing) {
-      throw new Error('A message is already being processed');
+    if (this.processingBySession.get(sessionId)) {
+      throw new Error(`A message is already being processed in session ${sessionId}`);
     }
 
-    this.isProcessing = true;
-    this.currentAbortController = new AbortController();
+    this.processingBySession.set(sessionId, true);
+    const abortController = new AbortController();
+    this.abortControllersBySession.set(sessionId, abortController);
     this.lastSuggestedPrompt = undefined;
     let wasCompacted = false;
 
@@ -194,7 +195,7 @@ class AgentManagerClass extends EventEmitter {
       const query = await loadSDK();
       if (!query) throw new Error('Failed to load SDK');
 
-      const options = await this.buildOptions(factsContext);
+      const options = await this.buildOptions(factsContext, abortController);
 
       console.log('[AgentManager] Calling query() with model:', options.model, 'thinking:', options.maxThinkingTokens || 'default');
       this.emitStatus({ type: 'thinking', message: 'hmm let me think 🤔' });
@@ -204,7 +205,7 @@ class AgentManagerClass extends EventEmitter {
 
       for await (const message of queryResult) {
         // Check if aborted
-        if (this.currentAbortController?.signal.aborted) {
+        if (abortController.signal.aborted) {
           console.log('[AgentManager] Query aborted by user');
           throw new Error('Query stopped by user');
         }
@@ -250,38 +251,62 @@ class AgentManagerClass extends EventEmitter {
       console.error('[AgentManager] Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
 
       // Only save user message if not aborted
-      if (!this.currentAbortController?.signal.aborted) {
+      if (!abortController.signal.aborted) {
         this.memory.saveMessage('user', userMessage, sessionId);
       }
 
       throw error;
     } finally {
-      this.isProcessing = false;
-      this.currentAbortController = null;
+      this.processingBySession.set(sessionId, false);
+      this.abortControllersBySession.delete(sessionId);
     }
   }
 
   /**
-   * Stop the currently running query
+   * Stop the query for a specific session (or any running query if no sessionId)
    */
-  stopQuery(): boolean {
-    if (this.isProcessing && this.currentAbortController) {
-      console.log('[AgentManager] Stopping current query...');
-      this.currentAbortController.abort();
-      this.emitStatus({ type: 'done' });
-      return true;
+  stopQuery(sessionId?: string): boolean {
+    if (sessionId) {
+      const abortController = this.abortControllersBySession.get(sessionId);
+      if (this.processingBySession.get(sessionId) && abortController) {
+        console.log(`[AgentManager] Stopping query for session ${sessionId}...`);
+        abortController.abort();
+        this.emitStatus({ type: 'done' });
+        return true;
+      }
+      return false;
+    }
+
+    // Legacy: stop any running query (first one found)
+    for (const [sid, isProcessing] of this.processingBySession.entries()) {
+      if (isProcessing) {
+        const abortController = this.abortControllersBySession.get(sid);
+        if (abortController) {
+          console.log(`[AgentManager] Stopping query for session ${sid}...`);
+          abortController.abort();
+          this.emitStatus({ type: 'done' });
+          return true;
+        }
+      }
     }
     return false;
   }
 
   /**
-   * Check if a query is currently processing
+   * Check if a query is currently processing (optionally for a specific session)
    */
-  isQueryProcessing(): boolean {
-    return this.isProcessing;
+  isQueryProcessing(sessionId?: string): boolean {
+    if (sessionId) {
+      return this.processingBySession.get(sessionId) || false;
+    }
+    // Check if any session is processing
+    for (const isProcessing of this.processingBySession.values()) {
+      if (isProcessing) return true;
+    }
+    return false;
   }
 
-  private async buildOptions(factsContext: string): Promise<SDKOptions> {
+  private async buildOptions(factsContext: string, abortController: AbortController): Promise<SDKOptions> {
     const appendParts: string[] = [];
 
     if (this.instructions) {
@@ -323,7 +348,7 @@ class AgentManagerClass extends EventEmitter {
       cwd: this.workspace,  // Use isolated workspace for agent file operations
       maxTurns: 20,
       ...(thinkingBudget !== undefined && thinkingBudget > 0 && { maxThinkingTokens: thinkingBudget }),
-      abortController: this.currentAbortController || new AbortController(),
+      abortController,
       tools: { type: 'preset', preset: 'claude_code' },
       settingSources: ['project'],  // Load skills from .claude/skills/
       allowedTools: [

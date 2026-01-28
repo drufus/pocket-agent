@@ -54,20 +54,8 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid var(--border);
       flex-shrink: 0;
       position: relative;
-    }
-
-    header::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, var(--accent) 0%, var(--accent-secondary) 50%, var(--accent) 100%);
-      opacity: 0.5;
     }
 
     /* Session Tabs */
@@ -132,6 +120,27 @@
       color: rgba(255,255,255,0.7);
     }
 
+    .tab.loading .tab-name {
+      background: linear-gradient(
+        90deg,
+        var(--text-primary) 0%,
+        var(--text-primary) 40%,
+        #60a5fa 50%,
+        var(--text-primary) 60%,
+        var(--text-primary) 100%
+      );
+      background-size: 200% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: tab-text-shimmer 1.5s ease-in-out infinite;
+    }
+
+    @keyframes tab-text-shimmer {
+      0% { background-position: 100% 0; }
+      100% { background-position: -100% 0; }
+    }
+
     .tab-name {
       overflow: hidden;
       text-overflow: ellipsis;
@@ -194,25 +203,6 @@
       border-color: var(--accent);
       color: var(--accent);
       background: rgba(168, 85, 247, 0.1);
-    }
-
-    header.loading::after {
-      background: linear-gradient(
-        90deg,
-        var(--accent) 0%,
-        var(--accent-secondary) 25%,
-        var(--text-primary) 50%,
-        var(--accent-secondary) 75%,
-        var(--accent) 100%
-      );
-      background-size: 200% 100%;
-      opacity: 0.8;
-      animation: headerShimmer 1.5s ease-in-out infinite;
-    }
-
-    @keyframes headerShimmer {
-      0% { background-position: 100% 0; }
-      100% { background-position: -100% 0; }
     }
 
     .header-left {
@@ -1248,10 +1238,10 @@
     const statsDiv = document.getElementById('stats');
     const fileInput = document.getElementById('file-input');
 
-    let isLoading = false;
+    let isLoadingBySession = new Map(); // Track loading state per session
     let pendingAttachments = []; // { file, name, type, size, dataUrl, content }
-    let statusCleanup = null;
-    let currentStatusEl = null;
+    let statusCleanupBySession = new Map(); // Track status listeners per session
+    let statusElBySession = new Map(); // Track status elements per session
     let currentSuggestion = null; // Stores the suggested prompt from the agent
     const ghostSuggestion = document.getElementById('ghost-suggestion');
 
@@ -1327,7 +1317,9 @@
 
       sessions.forEach((session, index) => {
         const tab = document.createElement('div');
-        tab.className = 'tab' + (session.id === currentSessionId ? ' active' : '');
+        const isActive = session.id === currentSessionId;
+        const isLoading = isLoadingBySession.get(session.id);
+        tab.className = 'tab' + (isActive ? ' active' : '') + (isLoading ? ' loading' : '');
         tab.dataset.sessionId = session.id;
         tab.dataset.index = index;
         tab.draggable = true;
@@ -1425,13 +1417,15 @@
     }
 
     async function switchSession(sessionId) {
-      if (sessionId === currentSessionId || isLoading) return;
+      if (sessionId === currentSessionId) return;
 
       currentSessionId = sessionId;
       renderTabs();
       messagesDiv.innerHTML = '';
       await loadHistory();
       updateStats();
+      // Update button state based on whether THIS session is loading
+      setButtonState(isLoadingBySession.get(sessionId) || false);
       input.focus();
     }
 
@@ -1700,7 +1694,7 @@
     }
 
     function handleSendClick() {
-      if (isLoading) {
+      if (isLoadingBySession.get(currentSessionId)) {
         stopQuery();
       } else {
         sendMessage();
@@ -1710,7 +1704,6 @@
     function setButtonState(loading) {
       const sendIcon = sendBtn.querySelector('.send-icon');
       const stopIcon = sendBtn.querySelector('.stop-icon');
-      const header = document.querySelector('header');
 
       if (loading) {
         sendBtn.classList.add('stop-btn');
@@ -1718,35 +1711,37 @@
         sendIcon.style.display = 'none';
         stopIcon.style.display = 'block';
         sendBtn.disabled = false;
-        header.classList.add('loading');
       } else {
         sendBtn.classList.remove('stop-btn');
         sendBtn.title = 'Send it!';
         sendIcon.style.display = 'block';
         stopIcon.style.display = 'none';
-        header.classList.remove('loading');
       }
     }
 
     async function stopQuery() {
+      const sessionId = currentSessionId;
       try {
-        await window.pocketAgent.stop();
+        await window.pocketAgent.stop(sessionId);
 
-        // Clean up status listener
+        // Clean up status listener for this session
+        const statusCleanup = statusCleanupBySession.get(sessionId);
         if (statusCleanup) {
           statusCleanup();
-          statusCleanup = null;
+          statusCleanupBySession.delete(sessionId);
         }
 
-        // Remove status indicator
-        if (currentStatusEl) {
-          currentStatusEl.remove();
-          currentStatusEl = null;
+        // Remove status indicator for this session
+        const statusEl = statusElBySession.get(sessionId);
+        if (statusEl) {
+          statusEl.remove();
+          statusElBySession.delete(sessionId);
         }
 
         addMessage('system', 'Query stopped.');
 
-        isLoading = false;
+        isLoadingBySession.set(sessionId, false);
+        renderTabs(); // Update tab loading indicator
         setButtonState(false);
         scrollToBottom();
         input.focus();
@@ -1758,14 +1753,16 @@
     async function sendMessage() {
       const message = input.value.trim();
       const attachments = [...pendingAttachments];
+      const sessionId = currentSessionId; // Capture session at start
 
-      if ((!message && attachments.length === 0) || isLoading) return;
+      if ((!message && attachments.length === 0) || isLoadingBySession.get(sessionId)) return;
 
       // Clear empty state if present
       const emptyState = messagesDiv.querySelector('.empty-state');
       if (emptyState) emptyState.remove();
 
-      isLoading = true;
+      isLoadingBySession.set(sessionId, true);
+      renderTabs(); // Update tab loading indicator
       setButtonState(true);
       input.value = '';
       input.style.height = 'auto';
@@ -1776,66 +1773,82 @@
 
       // Show user message with attachments
       addMessage('user', message, true, attachments);
-      currentStatusEl = addStatusIndicator('hmm let me think 🤔');
+      const statusEl = addStatusIndicator('hmm let me think 🤔');
+      statusElBySession.set(sessionId, statusEl);
       scrollToBottom();
 
       // Build the full message with attachments
       const fullMessage = await buildMessageWithAttachments(message, attachments);
 
-      // Set up status listener
-      statusCleanup = window.pocketAgent.onStatus((status) => {
-        updateStatusIndicator(status);
+      // Set up status listener for this session
+      const statusCleanup = window.pocketAgent.onStatus((status) => {
+        // Only update status if we're still on the same session
+        if (currentSessionId === sessionId) {
+          updateStatusIndicator(status, sessionId);
+        }
       });
+      statusCleanupBySession.set(sessionId, statusCleanup);
 
       try {
-        const result = await window.pocketAgent.send(fullMessage, currentSessionId);
+        const result = await window.pocketAgent.send(fullMessage, sessionId);
 
         // Clean up status listener
-        if (statusCleanup) {
-          statusCleanup();
-          statusCleanup = null;
+        const cleanup = statusCleanupBySession.get(sessionId);
+        if (cleanup) {
+          cleanup();
+          statusCleanupBySession.delete(sessionId);
         }
 
-        // Remove status indicator
+        // Remove status indicator (only if still on this session)
+        const currentStatusEl = statusElBySession.get(sessionId);
         if (currentStatusEl) {
           currentStatusEl.remove();
-          currentStatusEl = null;
+          statusElBySession.delete(sessionId);
         }
 
-        if (result.success) {
-          addMessage('assistant', result.response);
+        // Only update UI if still on same session
+        if (currentSessionId === sessionId) {
+          if (result.success) {
+            addMessage('assistant', result.response);
 
-          // If there's a suggested prompt, show it as ghost text
-          if (result.suggestedPrompt) {
-            setSuggestion(result.suggestedPrompt);
+            // If there's a suggested prompt, show it as ghost text
+            if (result.suggestedPrompt) {
+              setSuggestion(result.suggestedPrompt);
+            }
+          } else {
+            addMessage('error', result.error);
           }
-        } else {
-          addMessage('error', result.error);
-        }
 
-        updateStats();
+          updateStats();
+        }
       } catch (err) {
         // Clean up status listener
-        if (statusCleanup) {
-          statusCleanup();
-          statusCleanup = null;
+        const cleanup = statusCleanupBySession.get(sessionId);
+        if (cleanup) {
+          cleanup();
+          statusCleanupBySession.delete(sessionId);
         }
 
+        const currentStatusEl = statusElBySession.get(sessionId);
         if (currentStatusEl) {
           currentStatusEl.remove();
-          currentStatusEl = null;
+          statusElBySession.delete(sessionId);
         }
 
-        // Don't show error if query was stopped
-        if (!err.message?.includes('stopped')) {
+        // Only show error if still on same session and not stopped
+        if (currentSessionId === sessionId && !err.message?.includes('stopped')) {
           addMessage('error', err.message || 'Something went wrong');
         }
       }
 
-      isLoading = false;
-      setButtonState(false);
-      scrollToBottom();
-      input.focus();
+      isLoadingBySession.set(sessionId, false);
+      renderTabs(); // Update tab loading indicator
+      // Only update button state if still on same session
+      if (currentSessionId === sessionId) {
+        setButtonState(false);
+        scrollToBottom();
+        input.focus();
+      }
     }
 
     async function buildMessageWithAttachments(message, attachments) {
@@ -1984,17 +1997,20 @@
       return div;
     }
 
-    function updateStatusIndicator(status) {
-      if (!currentStatusEl) return;
+    function updateStatusIndicator(status, sessionId) {
+      // Use sessionId if provided, otherwise fall back to current session
+      const targetSession = sessionId || currentSessionId;
+      const statusEl = statusElBySession.get(targetSession);
+      if (!statusEl) return;
 
-      const actionEl = currentStatusEl.querySelector('.status-action');
-      const detailEl = currentStatusEl.querySelector('.status-detail');
+      const actionEl = statusEl.querySelector('.status-action');
+      const detailEl = statusEl.querySelector('.status-detail');
 
       if (status.type === 'thinking') {
         actionEl.textContent = status.message || 'hmm let me think 🤔';
         detailEl.textContent = '';
         detailEl.style.display = 'none';
-        currentStatusEl.classList.remove('subagent-active');
+        statusEl.classList.remove('subagent-active');
       } else if (status.type === 'tool_start') {
         actionEl.textContent = status.toolName || 'doing something cool ✨';
         if (status.toolInput) {
@@ -2005,15 +2021,15 @@
           detailEl.textContent = '';
           detailEl.style.display = 'none';
         }
-        currentStatusEl.classList.remove('subagent-active');
+        statusEl.classList.remove('subagent-active');
       } else if (status.type === 'tool_end') {
         actionEl.textContent = status.message || 'got it, thinking... 💭';
         detailEl.textContent = '';
         detailEl.style.display = 'none';
-        currentStatusEl.classList.remove('subagent-active');
+        statusEl.classList.remove('subagent-active');
       } else if (status.type === 'subagent_start') {
         // Subagent spawned - show special status
-        currentStatusEl.classList.add('subagent-active');
+        statusEl.classList.add('subagent-active');
         actionEl.textContent = status.message || 'spawning helpers 🚀';
         if (status.toolInput) {
           const countBadge = status.agentCount > 1 ? ` (${status.agentCount} active)` : '';
@@ -2031,7 +2047,7 @@
         detailEl.style.display = 'none';
       } else if (status.type === 'subagent_end') {
         // All subagents done
-        currentStatusEl.classList.remove('subagent-active');
+        statusEl.classList.remove('subagent-active');
         actionEl.textContent = status.message || 'helpers done ✨';
         detailEl.textContent = '';
         detailEl.style.display = 'none';
@@ -2039,7 +2055,7 @@
         actionEl.textContent = 'cooking up a response... 👨‍🍳';
         detailEl.textContent = '';
         detailEl.style.display = 'none';
-        currentStatusEl.classList.remove('subagent-active');
+        statusEl.classList.remove('subagent-active');
       }
 
       scrollToBottom();

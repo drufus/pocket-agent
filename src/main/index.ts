@@ -1054,8 +1054,8 @@ function setupIPC(): void {
     return { success };
   });
 
-  ipcMain.handle('agent:stop', async () => {
-    const stopped = AgentManager.stopQuery();
+  ipcMain.handle('agent:stop', async (_, sessionId?: string) => {
+    const stopped = AgentManager.stopQuery(sessionId);
     return { success: stopped };
   });
 
