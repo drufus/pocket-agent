@@ -1,5 +1,5 @@
 import { MemoryManager, Message, SmartContextOptions } from '../memory';
-import { buildMCPServers, buildSdkMcpServers, setMemoryManager, ToolsConfig, validateToolsConfig, setCurrentSessionId } from '../tools';
+import { buildMCPServers, buildSdkMcpServers, setMemoryManager, setSoulMemoryManager, ToolsConfig, validateToolsConfig, setCurrentSessionId } from '../tools';
 import { closeBrowserManager } from '../browser';
 import { loadIdentity } from '../config/identity';
 import { loadInstructions } from '../config/instructions';
@@ -141,6 +141,7 @@ class AgentManagerClass extends EventEmitter {
     this.instructions = loadInstructions();
     this.memory.setSummarizer(this.createSummary.bind(this));
     setMemoryManager(this.memory);
+    setSoulMemoryManager(this.memory);
 
     console.log('[AgentManager] Initialized');
     console.log('[AgentManager] Project root:', this.projectRoot);
@@ -289,6 +290,7 @@ class AgentManagerClass extends EventEmitter {
       const smartContextOptions = getSmartContextOptions(userMessage);
       const smartContext = await memory.getSmartContext(sessionId, smartContextOptions);
       const factsContext = memory.getFactsForContext();
+      const soulContext = memory.getSoulContext();
 
       console.log(`[AgentManager] Smart context: ${smartContext.stats.recentCount} recent, ${smartContext.stats.summarizedMessages} summarized, ${smartContext.stats.relevantCount} relevant (${smartContext.totalTokens} tokens)`);
 
@@ -336,7 +338,7 @@ class AgentManagerClass extends EventEmitter {
         ? userMessages[userMessages.length - 1].timestamp
         : undefined;
 
-      const options = await this.buildOptions(factsContext, abortController, lastUserMessageTimestamp);
+      const options = await this.buildOptions(factsContext, soulContext, abortController, lastUserMessageTimestamp);
 
       console.log('[AgentManager] Calling query() with model:', options.model, 'thinking:', options.maxThinkingTokens || 'default');
       this.emitStatus({ type: 'thinking', message: 'hmm let me think 🤔' });
@@ -498,7 +500,7 @@ class AgentManagerClass extends EventEmitter {
     return false;
   }
 
-  private async buildOptions(factsContext: string, abortController: AbortController, lastMessageTimestamp?: string): Promise<SDKOptions> {
+  private async buildOptions(factsContext: string, soulContext: string, abortController: AbortController, lastMessageTimestamp?: string): Promise<SDKOptions> {
     const appendParts: string[] = [];
 
     // Add temporal context first (current time awareness)
@@ -521,6 +523,10 @@ class AgentManagerClass extends EventEmitter {
 
     if (factsContext) {
       appendParts.push(factsContext);
+    }
+
+    if (soulContext) {
+      appendParts.push(soulContext);
     }
 
     // Add daily logs context (recent activity journal)
@@ -561,6 +567,11 @@ class AgentManagerClass extends EventEmitter {
         'mcp__pocket-agent__list_facts',
         'mcp__pocket-agent__memory_search',
         'mcp__pocket-agent__daily_log',
+        // Custom MCP tools - soul
+        'mcp__pocket-agent__soul_set',
+        'mcp__pocket-agent__soul_get',
+        'mcp__pocket-agent__soul_list',
+        'mcp__pocket-agent__soul_delete',
         // Custom MCP tools - scheduler
         'mcp__pocket-agent__schedule_task',
         'mcp__pocket-agent__list_scheduled_tasks',

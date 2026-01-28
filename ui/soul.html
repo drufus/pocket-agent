@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:;">
+  <title>My Approach - Pocket Agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0a0a0b;
+      --bg-secondary: #141415;
+      --bg-tertiary: #1c1c1e;
+      --border: #2a2a2d;
+      --text-primary: #fafafa;
+      --text-secondary: #a1a1a6;
+      --text-muted: #636366;
+      --accent: #a855f7;
+      --accent-secondary: #ec4899;
+      --accent-hover: #c084fc;
+      --error: #ef4444;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Sora', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    header {
+      background: var(--bg-secondary);
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-family: 'Sora', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    header h1 span {
+      background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .aspect-count {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-left: 10px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .header-actions button {
+      padding: 6px 14px;
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .header-actions button:hover {
+      background: var(--border);
+      color: var(--text-primary);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .header-actions button:active {
+      transform: translateY(0);
+    }
+
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+
+    .content::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .content::-webkit-scrollbar-track {
+      background: var(--bg-primary);
+    }
+
+    .content::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    .content::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    .aspect-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+      transition: all 0.2s ease;
+    }
+
+    .aspect-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 4px 16px rgba(168, 85, 247, 0.1);
+    }
+
+    .aspect-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+
+    .aspect-name {
+      font-size: 14px;
+      font-weight: 600;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-secondary) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .aspect-content {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
+    .aspect-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 10px;
+    }
+
+    .delete-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 4px;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .delete-btn:hover {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--error);
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      padding: 40px;
+      text-align: center;
+      color: var(--text-muted);
+    }
+
+    .empty-state svg {
+      margin-bottom: 16px;
+      opacity: 0.4;
+    }
+
+    .empty-state p {
+      font-size: 14px;
+    }
+
+    .empty-state .hint {
+      font-size: 12px;
+      margin-top: 8px;
+      opacity: 0.7;
+    }
+
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 10px 16px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      color: var(--text-primary);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.2s ease;
+      z-index: 1000;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .toast.success {
+      border-color: var(--success);
+    }
+
+    .toast.error {
+      border-color: var(--error);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div style="display: flex; align-items: center;">
+      <h1><span>My Approach</span></h1>
+      <span class="aspect-count" id="aspect-count"></span>
+    </div>
+    <div class="header-actions">
+      <button onclick="window.close()">Done</button>
+      <button onclick="loadAspects()">Refresh</button>
+    </div>
+  </header>
+
+  <div class="content" id="content">
+    <!-- Cards will be inserted here -->
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    async function loadAspects() {
+      try {
+        const aspects = await window.pocketAgent.listSoulAspects();
+        const content = document.getElementById('content');
+        const countEl = document.getElementById('aspect-count');
+
+        countEl.textContent = `(${aspects.length})`;
+
+        if (aspects.length === 0) {
+          content.innerHTML = `
+            <div class="empty-state">
+              <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 16v-4"/>
+                <path d="M12 8h.01"/>
+              </svg>
+              <p>no approach notes yet</p>
+              <p class="hint">as we chat, i'll learn how to work best with you</p>
+            </div>
+          `;
+          return;
+        }
+
+        // Sort aspects alphabetically
+        aspects.sort((a, b) => a.aspect.localeCompare(b.aspect));
+
+        content.innerHTML = aspects.map(a => `
+          <div class="aspect-card" data-id="${a.id}">
+            <div class="aspect-header">
+              <span class="aspect-name">${escapeHtml(formatAspectName(a.aspect))}</span>
+              <button class="delete-btn" onclick="deleteAspect(${a.id})" title="Remove this">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+              </button>
+            </div>
+            <div class="aspect-content">${escapeHtml(a.content)}</div>
+            <div class="aspect-meta">Updated: ${formatDate(a.updated_at)}</div>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Error loading aspects:', error);
+        showToast('Failed to load aspects', 'error');
+      }
+    }
+
+    async function deleteAspect(id) {
+      if (!confirm('Remove this aspect?')) return;
+
+      try {
+        const result = await window.pocketAgent.deleteSoulAspect(id);
+        if (result.success) {
+          // Remove card with animation
+          const card = document.querySelector(`.aspect-card[data-id="${id}"]`);
+          if (card) {
+            card.style.opacity = '0';
+            card.style.transform = 'translateX(-10px)';
+            card.style.transition = 'all 0.2s ease';
+            setTimeout(() => {
+              card.remove();
+
+              // Update count
+              const countEl = document.getElementById('aspect-count');
+              const match = countEl.textContent.match(/\d+/);
+              const currentCount = match ? parseInt(match[0]) : 0;
+              countEl.textContent = `(${currentCount - 1})`;
+
+              // If no aspects left, reload to show empty state
+              if (currentCount - 1 === 0) {
+                loadAspects();
+              }
+            }, 200);
+          }
+          showToast('Aspect removed', 'success');
+        } else {
+          showToast('Failed to remove aspect', 'error');
+        }
+      } catch (error) {
+        console.error('Error deleting aspect:', error);
+        showToast('Failed to remove aspect', 'error');
+      }
+    }
+
+    function formatAspectName(name) {
+      // Convert snake_case to Title Case
+      return name.split('_').map(word =>
+        word.charAt(0).toUpperCase() + word.slice(1)
+      ).join(' ');
+    }
+
+    function formatDate(dateStr) {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast ${type} show`;
+
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2500);
+    }
+
+    // Initialize
+    loadAspects();
+  </script>
+</body>
+</html>

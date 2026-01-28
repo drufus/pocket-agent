@@ -189,6 +189,7 @@ let setupWindow: BrowserWindow | null = null;
 let factsGraphWindow: BrowserWindow | null = null;
 let customizeWindow: BrowserWindow | null = null;
 let factsWindow: BrowserWindow | null = null;
+let soulWindow: BrowserWindow | null = null;
 let skillsSetupWindow: BrowserWindow | null = null;
 
 /**
@@ -912,6 +913,58 @@ function openFactsWindow(): void {
   });
 }
 
+function openSoulWindow(): void {
+  if (soulWindow && !soulWindow.isDestroyed()) {
+    soulWindow.focus();
+    return;
+  }
+
+  const savedBoundsJson = SettingsManager.get('window.soulBounds');
+  let windowOptions: Electron.BrowserWindowConstructorOptions = {
+    width: 700,
+    height: 550,
+    title: 'My Approach - Pocket Agent',
+    backgroundColor: '#0a0a0b',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+    show: false,
+  };
+
+  if (savedBoundsJson) {
+    try {
+      const savedBounds = JSON.parse(savedBoundsJson);
+      if (savedBounds.x !== undefined) windowOptions.x = savedBounds.x;
+      if (savedBounds.y !== undefined) windowOptions.y = savedBounds.y;
+      if (savedBounds.width) windowOptions.width = savedBounds.width;
+      if (savedBounds.height) windowOptions.height = savedBounds.height;
+    } catch { /* ignore */ }
+  }
+
+  soulWindow = new BrowserWindow(windowOptions);
+
+  soulWindow.loadFile(path.join(__dirname, '../../ui/soul.html'));
+
+  soulWindow.once('ready-to-show', () => {
+    soulWindow?.show();
+  });
+
+  const saveBounds = () => {
+    if (soulWindow && !soulWindow.isDestroyed()) {
+      SettingsManager.set('window.soulBounds', JSON.stringify(soulWindow.getBounds()));
+    }
+  };
+  soulWindow.on('moved', saveBounds);
+  soulWindow.on('resized', saveBounds);
+  soulWindow.on('close', saveBounds);
+
+  soulWindow.on('closed', () => {
+    soulWindow = null;
+  });
+}
+
 function createSkillsSetupWindow(): void {
   if (skillsSetupWindow && !skillsSetupWindow.isDestroyed()) {
     skillsSetupWindow.focus();
@@ -1086,12 +1139,33 @@ function setupIPC(): void {
     return memory.getFactsGraphData();
   });
 
+  // Soul (Self-Knowledge)
+  ipcMain.handle('soul:list', async () => {
+    if (!memory) return [];
+    return memory.getAllSoulAspects();
+  });
+
+  ipcMain.handle('soul:get', async (_, aspect: string) => {
+    if (!memory) return null;
+    return memory.getSoulAspect(aspect);
+  });
+
+  ipcMain.handle('soul:delete', async (_, id: number) => {
+    if (!memory) return { success: false };
+    const success = memory.deleteSoulAspectById(id);
+    return { success };
+  });
+
   ipcMain.handle('app:openFactsGraph', async () => {
     openFactsGraphWindow();
   });
 
   ipcMain.handle('app:openFacts', async () => {
     openFactsWindow();
+  });
+
+  ipcMain.handle('app:openSoul', async () => {
+    openSoulWindow();
   });
 
   ipcMain.handle('app:openCustomize', async () => {

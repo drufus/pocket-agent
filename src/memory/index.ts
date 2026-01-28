@@ -119,6 +119,14 @@ export interface TelegramChatSession {
   created_at: string;
 }
 
+export interface SoulAspect {
+  id: number;
+  aspect: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Summarizer function type - injected to avoid circular dependency with agent
 export type SummarizerFn = (messages: Message[]) => Promise<string>;
 
@@ -144,6 +152,10 @@ export class MemoryManager {
   // Cache for facts context (invalidated on fact changes)
   private factsContextCache: string | null = null;
   private factsContextCacheValid: boolean = false;
+
+  // Cache for soul context (invalidated on soul changes)
+  private soulContextCache: string | null = null;
+  private soulContextCacheValid: boolean = false;
 
   constructor(dbPath: string) {
     this.db = new Database(dbPath);
@@ -262,6 +274,15 @@ export class MemoryManager {
         updated_at TEXT DEFAULT (datetime('now'))
       );
 
+      -- Soul aspects (agent's evolving identity/personality)
+      CREATE TABLE IF NOT EXISTS soul (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        aspect TEXT UNIQUE NOT NULL,
+        content TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
+      );
+
       -- Telegram chat to session mapping
       CREATE TABLE IF NOT EXISTS telegram_chat_sessions (
         chat_id INTEGER PRIMARY KEY,
@@ -304,6 +325,7 @@ export class MemoryManager {
       CREATE INDEX IF NOT EXISTS idx_tasks_due ON tasks(due_date);
       CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
       CREATE INDEX IF NOT EXISTS idx_daily_logs_date ON daily_logs(date);
+      CREATE INDEX IF NOT EXISTS idx_soul_aspect ON soul(aspect);
 
       -- Unique constraint on session names (for Telegram group linking)
       CREATE UNIQUE INDEX IF NOT EXISTS idx_sessions_name_unique ON sessions(name);
@@ -1898,6 +1920,115 @@ export class MemoryManager {
     }
 
     return { nodes, links };
+  }
+
+  // ============ SOUL METHODS ============
+
+  /**
+   * Set or update a soul aspect
+   */
+  setSoulAspect(aspect: string, content: string): number {
+    const existing = this.db.prepare(`
+      SELECT id FROM soul WHERE aspect = ?
+    `).get(aspect) as { id: number } | undefined;
+
+    let aspectId: number;
+
+    if (existing) {
+      this.db.prepare(`
+        UPDATE soul SET content = ?, updated_at = datetime('now') WHERE id = ?
+      `).run(content, existing.id);
+      aspectId = existing.id;
+    } else {
+      const stmt = this.db.prepare(`
+        INSERT INTO soul (aspect, content)
+        VALUES (?, ?)
+      `);
+      const result = stmt.run(aspect, content);
+      aspectId = result.lastInsertRowid as number;
+    }
+
+    // Invalidate soul context cache
+    this.soulContextCacheValid = false;
+
+    return aspectId;
+  }
+
+  /**
+   * Get a specific soul aspect
+   */
+  getSoulAspect(aspect: string): SoulAspect | null {
+    const row = this.db.prepare(`
+      SELECT id, aspect, content, created_at, updated_at
+      FROM soul
+      WHERE aspect = ?
+    `).get(aspect) as SoulAspect | undefined;
+
+    return row || null;
+  }
+
+  /**
+   * Get all soul aspects
+   */
+  getAllSoulAspects(): SoulAspect[] {
+    const stmt = this.db.prepare(`
+      SELECT id, aspect, content, created_at, updated_at
+      FROM soul
+      ORDER BY aspect
+    `);
+    return stmt.all() as SoulAspect[];
+  }
+
+  /**
+   * Delete a soul aspect
+   */
+  deleteSoulAspect(aspect: string): boolean {
+    const stmt = this.db.prepare('DELETE FROM soul WHERE aspect = ?');
+    const result = stmt.run(aspect);
+    if (result.changes > 0) {
+      this.soulContextCacheValid = false; // Invalidate cache
+    }
+    return result.changes > 0;
+  }
+
+  /**
+   * Delete a soul aspect by ID
+   */
+  deleteSoulAspectById(id: number): boolean {
+    const stmt = this.db.prepare('DELETE FROM soul WHERE id = ?');
+    const result = stmt.run(id);
+    if (result.changes > 0) {
+      this.soulContextCacheValid = false; // Invalidate cache
+    }
+    return result.changes > 0;
+  }
+
+  /**
+   * Get soul aspects formatted for context injection
+   */
+  getSoulContext(): string {
+    // Return cached result if valid
+    if (this.soulContextCacheValid && this.soulContextCache !== null) {
+      return this.soulContextCache;
+    }
+
+    const aspects = this.getAllSoulAspects();
+    if (aspects.length === 0) {
+      this.soulContextCache = '';
+      this.soulContextCacheValid = true;
+      return '';
+    }
+
+    const lines: string[] = ['## Soul'];
+    for (const aspect of aspects) {
+      lines.push(`\n### ${aspect.aspect}`);
+      lines.push(aspect.content);
+    }
+
+    const result = lines.join('\n');
+    this.soulContextCache = result;
+    this.soulContextCacheValid = true;
+    return result;
   }
 
   close(): void {

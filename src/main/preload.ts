@@ -38,8 +38,16 @@ contextBridge.exposeInMainWorld('pocketAgent', {
   getFactCategories: () => ipcRenderer.invoke('facts:categories'),
   deleteFact: (id: number) => ipcRenderer.invoke('facts:delete', id),
   getGraphData: () => ipcRenderer.invoke('facts:graph-data'),
+
+  // Soul (Self-Knowledge)
+  listSoulAspects: () => ipcRenderer.invoke('soul:list'),
+  getSoulAspect: (aspect: string) => ipcRenderer.invoke('soul:get', aspect),
+  deleteSoulAspect: (id: number) => ipcRenderer.invoke('soul:delete', id),
+
+  // App windows
   openFactsGraph: () => ipcRenderer.invoke('app:openFactsGraph'),
   openFacts: () => ipcRenderer.invoke('app:openFacts'),
+  openSoul: () => ipcRenderer.invoke('app:openSoul'),
   openCustomize: () => ipcRenderer.invoke('app:openCustomize'),
   openRoutines: () => ipcRenderer.invoke('app:openRoutines'),
 
@@ -131,8 +139,14 @@ declare global {
         nodes: Array<{ id: number; subject: string; category: string; content: string; group: number }>;
         links: Array<{ source: number; target: number; type: 'category' | 'semantic' | 'keyword'; strength: number }>;
       }>;
+      // Soul
+      listSoulAspects: () => Promise<Array<{ id: number; aspect: string; content: string; created_at: string; updated_at: string }>>;
+      getSoulAspect: (aspect: string) => Promise<{ id: number; aspect: string; content: string; created_at: string; updated_at: string } | null>;
+      deleteSoulAspect: (id: number) => Promise<{ success: boolean }>;
+      // App windows
       openFactsGraph: () => Promise<void>;
       openFacts: () => Promise<void>;
+      openSoul: () => Promise<void>;
       openCustomize: () => Promise<void>;
       openRoutines: () => Promise<void>;
       // Customize

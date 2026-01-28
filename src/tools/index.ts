@@ -12,6 +12,7 @@
 import { execSync } from 'child_process';
 import { getBrowserToolDefinition, handleBrowserTool } from '../browser';
 import { getMemoryTools } from './memory-tools';
+import { getSoulTools } from './soul-tools';
 import { getSchedulerTools } from './scheduler-tools';
 import { getCalendarTools } from './calendar-tools';
 import { getTaskTools } from './task-tools';
@@ -31,6 +32,7 @@ setInterval(() => {
 }, 30000);
 
 export { setMemoryManager } from './memory-tools';
+export { setSoulMemoryManager } from './soul-tools';
 export { getSchedulerTools } from './scheduler-tools';
 export { getCalendarTools } from './calendar-tools';
 export { getTaskTools, closeTaskDb } from './task-tools';
@@ -238,6 +240,29 @@ export async function buildSdkMcpServers(
       tools.push(sdkTool);
     }
 
+    // Soul tools (with diagnostics wrapper)
+    const soulTools = getSoulTools();
+    for (const soulTool of soulTools) {
+      const wrappedHandler = wrapToolHandler(soulTool.name, soulTool.handler, getToolTimeout(soulTool.name));
+      const sdkTool = tool(
+        soulTool.name,
+        soulTool.description,
+        Object.fromEntries(
+          Object.entries(soulTool.input_schema.properties || {}).map(([key, value]: [string, unknown]) => {
+            const prop = value as { type?: string };
+            if (prop.type === 'string') return [key, z.string().optional()];
+            if (prop.type === 'number') return [key, z.number().optional()];
+            return [key, z.any().optional()];
+          })
+        ),
+        async (args) => {
+          const result = await wrappedHandler(args);
+          return { content: [{ type: 'text', text: result }] };
+        }
+      );
+      tools.push(sdkTool);
+    }
+
     // Scheduler tools (with diagnostics wrapper)
     const schedulerTools = getSchedulerTools();
     for (const schedTool of schedulerTools) {
@@ -341,6 +366,17 @@ export function getCustomTools(config: ToolsConfig): Array<{
   // Memory tools (always enabled)
   const memoryTools = getMemoryTools();
   for (const tool of memoryTools) {
+    tools.push({
+      name: tool.name,
+      description: tool.description,
+      input_schema: tool.input_schema as Record<string, unknown>,
+      handler: tool.handler,
+    });
+  }
+
+  // Soul tools (always enabled)
+  const soulTools = getSoulTools();
+  for (const tool of soulTools) {
     tools.push({
       name: tool.name,
       description: tool.description,
