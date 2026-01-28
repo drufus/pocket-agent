@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "generated": "2026-01-26",
-  "source": "clawdbot/clawdbot",
+  "source": "pocket-agent",
   "skills": {
     "1password": {
       "bins": ["op"],

@@ -2,12 +2,11 @@
 name: openai-whisper-api
 description: Transcribe audio via OpenAI Audio Transcriptions API (Whisper).
 homepage: https://platform.openai.com/docs/guides/speech-to-text
-metadata: {"clawdbot":{"emoji":"☁️","requires":{"bins":["curl"],"env":["OPENAI_API_KEY"]},"primaryEnv":"OPENAI_API_KEY"}}
 ---
 
 # OpenAI Whisper API (curl)
 
-Transcribe an audio file via OpenAI’s `/v1/audio/transcriptions` endpoint.
+Transcribe an audio file via OpenAI's `/v1/audio/transcriptions` endpoint.
 
 ## Quick start
 
@@ -30,14 +29,4 @@ Defaults:
 
 ## API key
 
-Set `OPENAI_API_KEY`, or configure it in `~/.clawdbot/clawdbot.json`:
-
-```json5
-{
-  skills: {
-    "openai-whisper-api": {
-      apiKey: "OPENAI_KEY_HERE"
-    }
-  }
-}
-```
+Set `OPENAI_API_KEY` env var, or configure via the app's Settings UI.
