@@ -6,7 +6,7 @@ homepage: https://developer.atlassian.com/cloud/trello/rest/
 
 # Trello Skill
 
-Manage Trello boards, lists, and cards directly from Clawdbot.
+Manage Trello boards, lists, and cards directly from Pocket Agent.
 
 ## Setup
 
