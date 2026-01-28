@@ -101,6 +101,8 @@ interface Session {
   name: string;
   created_at: string;
   updated_at: string;
+  telegram_linked?: boolean;
+  telegram_group_name?: string | null;
 }
 
 // Type declarations for renderer

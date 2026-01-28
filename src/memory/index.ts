@@ -14,6 +14,8 @@ export interface Session {
   name: string;
   created_at: string;
   updated_at: string;
+  telegram_linked?: boolean;
+  telegram_group_name?: string | null;
 }
 
 export interface Message {
@@ -508,13 +510,37 @@ export class MemoryManager {
 
   /**
    * Get all sessions, ordered by most recent activity
+   * Includes telegram link status
    */
   getSessions(): Session[] {
-    return this.db.prepare(`
-      SELECT id, name, created_at, updated_at
-      FROM sessions
-      ORDER BY updated_at DESC
-    `).all() as Session[];
+    interface SessionRow {
+      id: string;
+      name: string;
+      created_at: string;
+      updated_at: string;
+      telegram_linked: number;
+      telegram_group_name: string | null;
+    }
+    const rows = this.db.prepare(`
+      SELECT
+        s.id,
+        s.name,
+        s.created_at,
+        s.updated_at,
+        CASE WHEN t.chat_id IS NOT NULL THEN 1 ELSE 0 END as telegram_linked,
+        t.group_name as telegram_group_name
+      FROM sessions s
+      LEFT JOIN telegram_chat_sessions t ON s.id = t.session_id
+      ORDER BY s.updated_at DESC
+    `).all() as SessionRow[];
+    return rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      telegram_linked: !!row.telegram_linked,
+      telegram_group_name: row.telegram_group_name,
+    }));
   }
 
   /**
