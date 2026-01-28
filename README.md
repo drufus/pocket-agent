@@ -1,196 +1,165 @@
 # Pocket Agent
 
-A persistent personal AI assistant that runs as a desktop application on macOS. Pocket Agent maintains one continuous conversation across all sessions, remembering everything discussed.
+**Your AI that actually knows you.**
 
-## Features
+A desktop AI assistant that runs 24/7, remembers everything, and works across your entire digital life. Desktop. Telegram. Browser. All synced. All remembered.
 
-- **Persistent Memory**: All conversations stored locally in SQLite with automatic summarization
-- **Fact Extraction**: Learns and remembers important information about you
-- **Desktop Chat UI**: Clean, always-available chat interface via system tray
-- **Telegram Integration**: Access your assistant from anywhere via Telegram bot
-- **Scheduled Tasks**: Set up cron jobs for recurring tasks and reminders
-- **File & Terminal Access**: Full access to your filesystem and terminal
-- **Browser Automation**: Web scraping and automation capabilities
-- **Privacy-First**: All data stays on your machine
+---
 
-## Installation
+## Here's the thing
 
-### Download
+Every AI conversation starts from scratch. You explain your job again. Your projects again. Your preferences again. By the time you get anything useful, you've burned half the conversation just catching it up.
 
-Download the latest release from the [Releases](https://github.com/KenKaiii/pocket-agent/releases) page:
+That's dumb.
 
-| Architecture | Download |
-|--------------|----------|
-| Apple Silicon (M1/M2/M3) | [Pocket Agent-arm64.dmg](https://github.com/KenKaiii/pocket-agent/releases/latest/download/Pocket.Agent-1.0.0-arm64.dmg) |
-| Intel Mac | [Pocket Agent-x64.dmg](https://github.com/KenKaiii/pocket-agent/releases/latest/download/Pocket.Agent-1.0.0-x64.dmg) |
+**Pocket Agent remembers.** It learns who you are, what you're working on, how you like things done. The more you use it, the smarter it gets about *you*.
 
-### Install
+Three months from now, you can reference a conversation you had today. It'll know exactly what you're talking about.
 
-1. Open the downloaded DMG file
-2. Drag Pocket Agent to your Applications folder
-3. Launch Pocket Agent from Applications
-4. The app will appear in your system tray (menu bar)
+---
 
-## Initial Setup
+## What you actually get
 
-### API Key
+### It remembers everything
+Not just conversations—it extracts facts about you, your projects, your preferences. Recalls relevant context automatically. You'll forget things before it does.
 
-Pocket Agent requires an Anthropic API key:
+### It runs 24/7
+Lives in your menu bar. Set reminders. Schedule daily briefings. Automate the boring stuff. Wake up to a summary of your day already waiting.
 
-1. Get your API key from [console.anthropic.com](https://console.anthropic.com)
-2. On first launch, you'll be prompted to enter your API key
-3. The key is stored securely in your system keychain
+### Separate conversations for separate lives
+Work session. Personal session. Client session. Therapy session. Each one isolated with its own memory. Keep your contexts clean.
 
-### Telegram (Optional)
+### Desktop + Telegram, same brain
+Deep work at your desk. Quick questions from your phone. Link Telegram groups to specific sessions. Your assistant travels with you.
 
-To access your assistant via Telegram:
+### Browser automation that actually works
+"Check my email and tell me what's important."
+"Grab all the prices from this page."
+"Fill this form with my usual details."
 
-1. Create a bot with [@BotFather](https://t.me/botfather) on Telegram
-2. Copy the bot token
-3. Open Pocket Agent settings (click tray icon > Settings)
-4. Enter your Telegram bot token
-5. Start a chat with your bot and send `/start`
+Uses your logged-in Chrome sessions. No annoying re-authentication.
 
-## Usage
+### Natural language scheduling
+- "Remind me every morning about today's priorities"
+- "Ping me every 30 minutes to drink water"
+- "Weekly project recap every Friday at 5"
 
-### Desktop Chat
+Just tell it what you want. It figures out the timing.
 
-- Click the tray icon to open the chat window
-- Type your message and press Enter or click Send
-- The assistant remembers your entire conversation history
+### Calendar + tasks, built in
+"Add a call with Sarah tomorrow 2pm" — done. Reminders included. No separate app needed.
 
-### Telegram
+### Make it sound like you want
+Give it a name. Define its personality. Tell it to be formal, casual, sarcastic, whatever. It's your assistant.
 
-Send messages to your Telegram bot from any device. Commands:
+---
 
-- `/start` - Initialize the bot
-- `/status` - Check connection status
-- `/facts` - View remembered facts
-- `/clear` - Clear conversation history
+## What can you actually use this for?
 
-### Scheduled Tasks
+**Daily driver** — Calendar, reminders, planning, research. The basics, but actually good.
 
-Set up recurring tasks via the tray menu:
+**Thinking partner** — Process your thoughts with something that remembers your journey. Some people use it like a therapist.
 
-1. Click tray icon > Cron Jobs
-2. Add a new job with:
-   - **Name**: Unique identifier
-   - **Schedule**: Cron expression (e.g., `0 9 * * *` for 9 AM daily)
-   - **Prompt**: What the assistant should do
-   - **Channel**: Where to send the response (desktop/telegram)
+**Research assistant** — Build on previous deep dives instead of starting over every time.
 
-### Memory System
+**Work mode** — Project context that persists. Meeting prep. Status updates. Documentation that doesn't suck.
 
-The assistant automatically:
+**Smart home hub** — Hue lights. Sonos. Eight Sleep. Voice commands through your assistant.
 
-- Stores all conversations
-- Extracts and remembers important facts
-- Summarizes older conversations to maintain context
-- References past discussions naturally
+**Dev tools** — GitHub, terminal, browser automation, scheduled scripts. Power user stuff.
 
-You can view stored facts via the Settings menu or `/facts` command.
+---
 
-## Configuration
+## Get started in 2 minutes
 
-### Identity File
+### 1. Download
 
-Customize your assistant's personality by creating `~/.my-assistant/identity.md`:
+| Mac | Link |
+|-----|------|
+| Apple Silicon (M1/M2/M3/M4) | [Download .dmg](https://github.com/KenKaiii/pocket-agent/releases/latest) |
+| Intel | [Download .dmg](https://github.com/KenKaiii/pocket-agent/releases/latest) |
 
-```markdown
-# My Assistant
+### 2. Install
+Drag to Applications. Launch. Shows up in your menu bar.
 
-You are Alex, a helpful and friendly assistant.
+### 3. API Key
+Grab one from [console.anthropic.com](https://console.anthropic.com). Paste it in. Stored in your system keychain, not some random config file.
 
-## About the User
-- Name: John
-- Location: San Francisco
-- Interests: Programming, hiking, coffee
-```
+### 4. Go
+Click the icon. Start talking. That's literally it.
 
-### Environment Variables
+---
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `ANTHROPIC_API_KEY` | Anthropic API key | Yes |
-| `TELEGRAM_BOT_TOKEN` | Telegram bot token | No |
-| `TELEGRAM_ALLOWED_USERS` | Comma-separated chat IDs | No |
-| `CDP_URL` | Chrome DevTools Protocol URL | No |
+## Telegram (if you want it)
 
-## Development
+Talk to your assistant from anywhere:
 
-### Prerequisites
+1. Make a bot with [@BotFather](https://t.me/botfather)
+2. Paste the token in settings
+3. Message your bot
 
-- Node.js 20+
-- npm
+Same assistant. Same memory. Different device.
 
-### Setup
+**Commands:** `/status` `/facts` `/clear` `/link <session>` `/unlink`
+
+---
+
+## Your data stays yours
+
+- **Local storage** — Everything lives on your machine in SQLite
+- **Your API key** — Conversations hit Anthropic's API, that's it
+- **Encrypted secrets** — Keys go in your system keychain
+- **Zero telemetry** — We literally don't track anything
+
+---
+
+## Goes deeper if you want it to
+
+**70+ integrations** — Notion, Trello, GitHub, Slack, WhatsApp, Apple Notes, Google Workspace, image gen, speech-to-text... it's a lot.
+
+**MCP servers** — Extend it with Model Context Protocol if you're into that.
+
+**Full terminal access** — For when you need to get your hands dirty.
+
+---
+
+## For the devs
 
 ```bash
-# Clone the repository
 git clone https://github.com/KenKaiii/pocket-agent.git
 cd pocket-agent
-
-# Install dependencies
 npm install
-
-# Start in development mode
 npm run dev
 ```
 
-### Scripts
+**Stack:** Electron + Claude Agent SDK + SQLite + TypeScript
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Build and run in development |
-| `npm run build` | Compile TypeScript |
-| `npm run start` | Build and start the app |
-| `npm run lint` | Run ESLint |
-| `npm run typecheck` | Type check with TypeScript |
-| `npm run test` | Run tests |
-| `npm run dist` | Build distributable |
-| `npm run dist:local` | Build unsigned for local testing |
+`npm run dev` / `npm run build` / `npm run dist` / `npm run lint && npm run typecheck`
 
-### Project Structure
+---
 
-```
-pocket-agent/
-├── src/
-│   ├── main/          # Electron main process
-│   ├── agent/         # Claude Agent SDK integration
-│   ├── memory/        # SQLite persistence
-│   ├── channels/      # Telegram integration
-│   ├── scheduler/     # Cron job manager
-│   ├── browser/       # Browser automation
-│   ├── tools/         # Custom tools
-│   └── config/        # Configuration
-├── ui/                # HTML interfaces
-├── assets/            # Icons and static files
-└── build/             # Build configuration
-```
+## Built with
 
-## Privacy
+- [Claude Agent SDK](https://docs.anthropic.com/en/docs/build-with-claude/agent-sdk) — Anthropic's agent framework
+- [Electron](https://electronjs.org) — Desktop magic
+- [SQLite](https://sqlite.org) — Local persistence that just works
 
-- All data is stored locally on your machine
-- Conversations are sent to Anthropic's API for processing
-- No data is shared with third parties
-- API keys are stored in your system keychain
+---
 
-## Contributing
+## Community
 
-Contributions are welcome! Please:
+**Learn more & connect:**
+- [YouTube](https://youtube.com/@kenkaidoesai) — Tutorials, demos, and builds
+- [Community](https://skool.com/kenkai) — Join the conversation
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run `npm run lint && npm run typecheck`
-5. Submit a pull request
+---
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT — Do whatever you want with it.
 
-## Acknowledgments
+---
 
-- Built with [Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk)
-- Powered by [Anthropic's Claude](https://anthropic.com)
-- Desktop framework: [Electron](https://electronjs.org)
+**Stop re-explaining yourself to AI every single time.**
+
+[Download Pocket Agent →](https://github.com/KenKaiii/pocket-agent/releases/latest)
