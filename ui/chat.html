@@ -1160,24 +1160,81 @@
     }
 
     .attachment-remove {
-      width: 18px;
-      height: 18px;
+      width: 16px;
+      height: 16px;
       display: flex;
       align-items: center;
       justify-content: center;
       background: transparent;
       border: none;
-      border-radius: 50%;
+      border-radius: 4px;
       cursor: pointer;
       color: var(--text-muted);
       font-size: 14px;
       line-height: 1;
+      padding: 0;
+      transition: all 0.15s ease;
       flex-shrink: 0;
     }
 
     .attachment-remove:hover {
-      background: var(--border);
-      color: var(--error);
+      background: var(--error);
+      color: white;
+    }
+
+    /* Drag and Drop Overlay */
+    .drag-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(168, 85, 247, 0.1);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      pointer-events: none;
+    }
+
+    .drag-overlay.active {
+      display: flex;
+    }
+
+    .drag-overlay-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      padding: 48px 64px;
+      background: var(--bg-secondary);
+      border: 2px dashed var(--accent);
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(168, 85, 247, 0.2);
+    }
+
+    .drag-overlay-icon {
+      width: 64px;
+      height: 64px;
+      color: var(--accent);
+      animation: bounce 0.6s ease infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    .drag-overlay-text {
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .drag-overlay-hint {
+      font-size: 13px;
+      color: var(--text-muted);
     }
 
     /* Attachment in messages */
@@ -1312,6 +1369,19 @@
 
   <input type="file" id="file-input" onchange="handleFileSelect(event)" multiple
     accept=".txt,.md,.json,.csv,.xml,.html,.htm,.css,.js,.ts,.jsx,.tsx,.py,.rb,.go,.rs,.java,.c,.cpp,.h,.hpp,.sh,.yaml,.yml,.toml,.ini,.cfg,.conf,.log,.sql,.graphql,.pdf,.png,.jpg,.jpeg,.gif,.webp,.svg,.bmp,.ico">
+
+  <!-- Drag and Drop Overlay -->
+  <div id="drag-overlay" class="drag-overlay">
+    <div class="drag-overlay-content">
+      <svg class="drag-overlay-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <div class="drag-overlay-text">Drop files here</div>
+      <div class="drag-overlay-hint">Images, PDFs, code, and text files supported</div>
+    </div>
+  </div>
 
   <script>
     const messagesDiv = document.getElementById('messages');
@@ -2539,6 +2609,82 @@
       pendingAttachments = [];
       renderAttachmentPreviews();
     }
+
+    // Drag and Drop handling
+    const dragOverlay = document.getElementById('drag-overlay');
+    let dragCounter = 0; // Track nested drag events
+
+    function showDragOverlay() {
+      dragOverlay.classList.add('active');
+    }
+
+    function hideDragOverlay() {
+      dragOverlay.classList.remove('active');
+    }
+
+    // Prevent default drag behaviors on the whole document
+    document.addEventListener('dragenter', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragCounter++;
+
+      // Only show overlay if dragging files (types is DOMStringList, use contains not includes)
+      if (e.dataTransfer?.types?.contains('Files')) {
+        showDragOverlay();
+      }
+    });
+
+    document.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragCounter--;
+
+      // Hide overlay when drag leaves the window entirely
+      if (dragCounter === 0) {
+        hideDragOverlay();
+      }
+    });
+
+    document.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+
+    document.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragCounter = 0;
+      hideDragOverlay();
+
+      const files = Array.from(e.dataTransfer?.files || []);
+      if (files.length === 0) return;
+
+      for (const file of files) {
+        const ext = file.name.split('.').pop()?.toLowerCase() || '';
+
+        // Validate extension
+        if (!ALLOWED_EXTENSIONS.has(ext)) {
+          addMessage('system', `Unsupported file type: ${file.name}`);
+          continue;
+        }
+
+        // Validate size
+        if (file.size > MAX_FILE_SIZE) {
+          addMessage('system', `File too large (max 10MB): ${file.name}`);
+          continue;
+        }
+
+        try {
+          const attachment = await readFile(file, ext);
+          pendingAttachments.push(attachment);
+        } catch (err) {
+          addMessage('system', `Failed to read file: ${file.name}`);
+        }
+      }
+
+      renderAttachmentPreviews();
+      input.focus();
+    });
 
     // Auto-resize textarea
     input.addEventListener('input', () => {
