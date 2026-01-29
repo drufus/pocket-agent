@@ -1306,8 +1306,9 @@
       try {
         const models = await window.pocketAgent.getAvailableModels();
         const dropdown = document.getElementById('agent.model');
-        // Read from saved setting, not DOM (DOM might be empty on initial load)
-        const savedModel = await window.pocketAgent.getSetting('agent.model');
+        // Use local settings cache first (updated synchronously by change handler),
+        // fall back to backend only if local cache is empty
+        const savedModel = settings['agent.model'] || await window.pocketAgent.getSetting('agent.model');
 
         // Clear existing options
         dropdown.innerHTML = '';
@@ -1450,16 +1451,21 @@
         input.addEventListener('change', async () => {
           const key = input.id;
           const value = input.type === 'checkbox' ? input.checked.toString() : input.value;
+          const oldValue = settings[key];
+
+          // Update local cache immediately (before async call) to prevent race conditions
+          settings[key] = value;
 
           try {
             await window.pocketAgent.setSetting(key, value);
-            settings[key] = value;
             showToast('Got it!', 'success');
             // Activate reboot for settings that require restart
             if (key === 'agent.model') {
               activateReboot();
             }
           } catch (err) {
+            // Rollback local cache on failure
+            settings[key] = oldValue;
             console.error('Failed to save setting:', err);
             showToast('Oops, couldn\'t save that', 'error');
           }

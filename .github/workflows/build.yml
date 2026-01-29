@@ -50,6 +50,7 @@ jobs:
           path: |
             release/*.dmg
             release/*.zip
+            release/latest-mac.yml
 
       - name: Release
         if: startsWith(github.ref, 'refs/tags/')
@@ -58,6 +59,7 @@ jobs:
           files: |
             release/*.dmg
             release/*.zip
+            release/latest-mac.yml
           body: |
             ## Pocket Agent ${{ github.ref_name }}
 
