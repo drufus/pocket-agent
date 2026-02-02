@@ -1,0 +1,1699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:;">
+  <title>My Team - Pocket Agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@700&family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0a0a0b;
+      --bg-secondary: #141415;
+      --bg-tertiary: #1c1c1e;
+      --border: #2a2a2d;
+      --text-primary: #fafafa;
+      --text-secondary: #a1a1a6;
+      --text-muted: #636366;
+      --accent: #a855f7;
+      --accent-secondary: #ec4899;
+      --accent-hover: #c084fc;
+      --error: #ef4444;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Sora', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ---- Header ---- */
+
+    header {
+      background: var(--bg-secondary);
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-family: 'Pixelify Sans', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    header h1 span {
+      background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .persona-count {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-left: 10px;
+      font-family: 'Sora', sans-serif;
+      -webkit-text-fill-color: var(--text-muted);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .header-actions button {
+      padding: 6px 14px;
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: 'Sora', sans-serif;
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .header-actions button:hover {
+      background: var(--border);
+      color: var(--text-primary);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .header-actions button:active {
+      transform: translateY(0);
+    }
+
+    .header-actions button.primary {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-secondary) 100%);
+      color: white;
+      border: none;
+      box-shadow: 0 2px 8px rgba(168, 85, 247, 0.25);
+    }
+
+    .header-actions button.primary:hover {
+      background: linear-gradient(135deg, var(--accent-hover) 0%, var(--accent) 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(168, 85, 247, 0.35);
+    }
+
+    .header-actions button.danger {
+      color: var(--text-muted);
+    }
+
+    .header-actions button.danger:hover {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--error);
+      border-color: rgba(239, 68, 68, 0.3);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
+    }
+
+    /* ---- Content ---- */
+
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    .content::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .content::-webkit-scrollbar-track {
+      background: var(--bg-primary);
+    }
+
+    .content::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    .content::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    /* ---- Onboarding Wizard ---- */
+
+    .onboarding {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 24px 0;
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .onboarding-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .onboarding-header .logo {
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      box-shadow: 0 8px 24px rgba(168, 85, 247, 0.3);
+    }
+
+    .onboarding-header .logo svg {
+      width: 28px;
+      height: 28px;
+      color: white;
+    }
+
+    .onboarding-header h2 {
+      font-family: 'Pixelify Sans', sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+    }
+
+    .onboarding-header p {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    /* Step indicator */
+    .step-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 28px;
+    }
+
+    .step-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: all 0.3s ease;
+    }
+
+    .step-dot.active {
+      background: var(--accent);
+      box-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+    }
+
+    .step-dot.completed {
+      background: var(--success);
+    }
+
+    .step-connector {
+      width: 32px;
+      height: 2px;
+      background: var(--border);
+      transition: background 0.3s ease;
+    }
+
+    .step-connector.completed {
+      background: var(--success);
+    }
+
+    /* Wizard step */
+    .wizard-step {
+      display: none;
+      animation: stepSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .wizard-step.active {
+      display: block;
+    }
+
+    @keyframes stepSlide {
+      from { opacity: 0; transform: translateX(24px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .wizard-step h3 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .wizard-step .step-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+
+    /* Option grid for radio/checkbox */
+    .option-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .option-grid.three-col {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .option-item {
+      background: var(--bg-secondary);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+      user-select: none;
+    }
+
+    .option-item:hover {
+      border-color: rgba(168, 85, 247, 0.4);
+      background: var(--bg-tertiary);
+    }
+
+    .option-item.selected {
+      border-color: var(--accent);
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(236, 72, 153, 0.05) 100%);
+    }
+
+    .option-item .option-icon {
+      font-size: 20px;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .option-item .option-label {
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .option-item .option-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Wizard buttons */
+    .wizard-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .wizard-buttons button {
+      flex: 1;
+      padding: 12px 20px;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 600;
+      font-family: 'Sora', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .wizard-buttons button.primary {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-secondary) 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
+    }
+
+    .wizard-buttons button.primary:hover:not(:disabled) {
+      background: linear-gradient(135deg, var(--accent-hover) 0%, var(--accent) 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(168, 85, 247, 0.4);
+    }
+
+    .wizard-buttons button.primary:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .wizard-buttons button.secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .wizard-buttons button.secondary:hover {
+      background: var(--border);
+      color: var(--text-primary);
+    }
+
+    .wizard-buttons button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .wizard-buttons button svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid transparent;
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ---- Persona Grid ---- */
+
+    .persona-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      animation: fadeIn 0.4s ease;
+    }
+
+    .persona-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .persona-card:hover {
+      border-color: rgba(168, 85, 247, 0.3);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .persona-card.is-default {
+      border-color: rgba(168, 85, 247, 0.25);
+    }
+
+    .persona-card-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .persona-dot {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 12px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.9);
+      text-transform: capitalize;
+    }
+
+    .persona-dot svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .persona-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .persona-name {
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .persona-name .default-badge {
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(168, 85, 247, 0.15);
+      color: var(--accent);
+    }
+
+    .persona-role {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .persona-description {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      margin-bottom: 12px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .persona-card-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .persona-card-buttons {
+      display: flex;
+      gap: 6px;
+    }
+
+    .card-btn {
+      padding: 4px 10px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 500;
+      font-family: 'Sora', sans-serif;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .card-btn:hover {
+      background: var(--border);
+      color: var(--text-primary);
+    }
+
+    .card-btn.delete:hover {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--error);
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .card-btn.set-default:hover {
+      background: rgba(168, 85, 247, 0.1);
+      color: var(--accent);
+      border-color: rgba(168, 85, 247, 0.3);
+    }
+
+    /* Toggle switch */
+    .toggle {
+      position: relative;
+      width: 36px;
+      height: 20px;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: var(--border);
+      border-radius: 20px;
+      transition: all 0.25s ease;
+    }
+
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      left: 3px;
+      top: 3px;
+      background: var(--text-muted);
+      border-radius: 50%;
+      transition: all 0.25s ease;
+    }
+
+    .toggle input:checked + .toggle-slider {
+      background: var(--accent);
+    }
+
+    .toggle input:checked + .toggle-slider::before {
+      transform: translateX(16px);
+      background: white;
+    }
+
+    /* ---- Edit Modal ---- */
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 500;
+      animation: overlayIn 0.2s ease;
+    }
+
+    .modal-overlay.visible {
+      display: flex;
+    }
+
+    @keyframes overlayIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: 560px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+    }
+
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.95) translateY(12px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .modal-header h3 {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-close:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .modal-close svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .modal-body {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .modal-body::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .modal-body::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .modal-body::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    .modal-footer {
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .modal-footer button {
+      padding: 8px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 500;
+      font-family: 'Sora', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .modal-footer button.secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .modal-footer button.secondary:hover {
+      background: var(--border);
+      color: var(--text-primary);
+    }
+
+    .modal-footer button.primary {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-secondary) 100%);
+      color: white;
+      border: none;
+      box-shadow: 0 2px 8px rgba(168, 85, 247, 0.25);
+    }
+
+    .modal-footer button.primary:hover {
+      background: linear-gradient(135deg, var(--accent-hover) 0%, var(--accent) 100%);
+      box-shadow: 0 4px 12px rgba(168, 85, 247, 0.35);
+    }
+
+    .modal-footer button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Form inside modal */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .form-group.full-width {
+      grid-column: 1 / -1;
+    }
+
+    .form-group label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .form-group input,
+    .form-group textarea {
+      padding: 10px 12px;
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: 'Sora', sans-serif;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.15), 0 0 20px rgba(168, 85, 247, 0.1);
+    }
+
+    .form-group input::placeholder,
+    .form-group textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    .form-group textarea.mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .form-group .hint {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    /* Color picker row */
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .color-row input[type="color"] {
+      width: 36px;
+      height: 36px;
+      padding: 2px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .color-row input[type="color"]::-webkit-color-swatch-wrapper {
+      padding: 2px;
+    }
+
+    .color-row input[type="color"]::-webkit-color-swatch {
+      border: none;
+      border-radius: 5px;
+    }
+
+    .color-row input[type="text"] {
+      flex: 1;
+    }
+
+    /* ---- Confirm Dialog ---- */
+
+    .confirm-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 600;
+    }
+
+    .confirm-overlay.visible {
+      display: flex;
+    }
+
+    .confirm-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      width: 380px;
+      text-align: center;
+      animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+    }
+
+    .confirm-box h3 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .confirm-box p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .confirm-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .confirm-buttons button {
+      flex: 1;
+      padding: 10px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 500;
+      font-family: 'Sora', sans-serif;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .confirm-buttons button.secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .confirm-buttons button.secondary:hover {
+      background: var(--border);
+      color: var(--text-primary);
+    }
+
+    .confirm-buttons button.danger {
+      background: var(--error);
+      color: white;
+      border: none;
+    }
+
+    .confirm-buttons button.danger:hover {
+      background: #dc2626;
+    }
+
+    /* ---- Toast ---- */
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      min-width: 200px;
+      max-width: 360px;
+      background: rgba(28, 28, 30, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 14px 18px;
+      border-radius: 14px;
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: toastSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 1000;
+      overflow: hidden;
+      box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+      color: var(--text-primary);
+    }
+
+    .toast::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 3px;
+      width: 100%;
+      background: linear-gradient(90deg, var(--accent) 0%, var(--accent-secondary) 100%);
+      animation: toastProgress 2.5s linear forwards;
+      transform-origin: left;
+    }
+
+    .toast.success {
+      box-shadow:
+        0 8px 32px rgba(34, 197, 94, 0.15),
+        0 0 0 1px rgba(34, 197, 94, 0.2) inset,
+        0 0 20px rgba(34, 197, 94, 0.1);
+    }
+
+    .toast.success::before {
+      background: linear-gradient(90deg, #22c55e 0%, #4ade80 100%);
+    }
+
+    .toast.error {
+      box-shadow:
+        0 8px 32px rgba(239, 68, 68, 0.15),
+        0 0 0 1px rgba(239, 68, 68, 0.2) inset,
+        0 0 20px rgba(239, 68, 68, 0.1);
+    }
+
+    .toast.error::before {
+      background: linear-gradient(90deg, #ef4444 0%, #f87171 100%);
+    }
+
+    .toast.exiting {
+      animation: toastSlideOut 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
+    }
+
+    @keyframes toastSlideIn {
+      0% { transform: translateX(100%) scale(0.8); opacity: 0; }
+      100% { transform: translateX(0) scale(1); opacity: 1; }
+    }
+
+    @keyframes toastSlideOut {
+      0% { transform: translateX(0) scale(1); opacity: 1; }
+      100% { transform: translateX(100%) scale(0.8); opacity: 0; }
+    }
+
+    @keyframes toastProgress {
+      from { transform: scaleX(1); }
+      to { transform: scaleX(0); }
+    }
+
+    /* ---- Empty state ---- */
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 40px;
+      text-align: center;
+      color: var(--text-muted);
+    }
+
+    .empty-state svg {
+      margin-bottom: 16px;
+      opacity: 0.3;
+    }
+
+    .empty-state p {
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .empty-state .hint {
+      font-size: 12px;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div style="display: flex; align-items: center;">
+      <h1><span>My Team</span></h1>
+      <span class="persona-count" id="persona-count"></span>
+    </div>
+    <div class="header-actions" id="header-actions" style="display: none;">
+      <button class="danger" id="reset-btn" title="Reset to defaults">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;margin-right:4px;vertical-align:middle;"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        Reset
+      </button>
+      <button class="primary" id="add-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;margin-right:4px;vertical-align:middle;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Persona
+      </button>
+    </div>
+  </header>
+
+  <div class="content" id="content">
+    <!-- Onboarding or persona grid injected by JS -->
+  </div>
+
+  <!-- Edit / Create Modal -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-title">Edit Persona</h3>
+        <button class="modal-close" id="modal-close-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Name</label>
+            <input type="text" id="field-name" placeholder="e.g. Growth Advisor">
+          </div>
+          <div class="form-group">
+            <label>Slug (@mention)</label>
+            <input type="text" id="field-slug" placeholder="e.g. growth">
+            <span class="hint">Used with @slug in chat</span>
+          </div>
+          <div class="form-group">
+            <label>Role Title</label>
+            <input type="text" id="field-role" placeholder="e.g. Growth & Marketing Strategist">
+          </div>
+          <div class="form-group">
+            <label>Icon (Lucide name)</label>
+            <input type="text" id="field-icon" placeholder="e.g. trending-up">
+          </div>
+          <div class="form-group full-width">
+            <label>Color</label>
+            <div class="color-row">
+              <input type="color" id="field-color-picker" value="#a855f7">
+              <input type="text" id="field-color" placeholder="#a855f7">
+            </div>
+          </div>
+          <div class="form-group full-width">
+            <label>Description</label>
+            <textarea id="field-description" rows="2" placeholder="Brief description shown in the persona selector..."></textarea>
+          </div>
+          <div class="form-group full-width">
+            <label>Identity (System Prompt)</label>
+            <textarea id="field-identity" rows="8" class="mono" placeholder="The persona's personality, voice, expertise, communication style..."></textarea>
+          </div>
+          <div class="form-group full-width">
+            <label>Instructions</label>
+            <textarea id="field-instructions" rows="4" class="mono" placeholder="Additional behavioral instructions..."></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="secondary" id="modal-cancel-btn">Cancel</button>
+        <button class="primary" id="modal-save-btn">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Dialog -->
+  <div class="confirm-overlay" id="confirm-overlay">
+    <div class="confirm-box">
+      <h3 id="confirm-title">Are you sure?</h3>
+      <p id="confirm-message">This action cannot be undone.</p>
+      <div class="confirm-buttons">
+        <button class="secondary" id="confirm-cancel-btn">Cancel</button>
+        <button class="danger" id="confirm-action-btn">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Click Sound -->
+  <audio id="normal-click-sound" preload="auto" src="../assets/normal-click.mp3"></audio>
+
+  <script>
+    // -----------------------------------------------------------------------
+    // Click sound
+    // -----------------------------------------------------------------------
+    const normalClickSound = document.getElementById('normal-click-sound');
+    function playNormalClick() {
+      if (normalClickSound) {
+        normalClickSound.currentTime = 0;
+        normalClickSound.play().catch(() => {});
+      }
+    }
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('button, .toggle, .option-item, .card-btn')) {
+        playNormalClick();
+      }
+    });
+
+    // -----------------------------------------------------------------------
+    // State
+    // -----------------------------------------------------------------------
+    let personas = [];
+    let editingPersonaId = null; // null = create mode
+    let confirmCallback = null;
+
+    // -----------------------------------------------------------------------
+    // DOM refs
+    // -----------------------------------------------------------------------
+    const contentEl = document.getElementById('content');
+    const headerActions = document.getElementById('header-actions');
+    const personaCountEl = document.getElementById('persona-count');
+    const modalOverlay = document.getElementById('modal-overlay');
+    const confirmOverlayEl = document.getElementById('confirm-overlay');
+
+    // -----------------------------------------------------------------------
+    // Init
+    // -----------------------------------------------------------------------
+    async function init() {
+      try {
+        personas = await window.pocketAgent.listPersonas(false);
+      } catch {
+        personas = [];
+      }
+
+      if (personas.length === 0) {
+        renderOnboarding();
+        headerActions.style.display = 'none';
+      } else {
+        renderGrid();
+        headerActions.style.display = 'flex';
+      }
+      updateCount();
+    }
+
+    function updateCount() {
+      const active = personas.filter(p => p.is_active).length;
+      personaCountEl.textContent = personas.length > 0 ? `${active} active / ${personas.length} total` : '';
+    }
+
+    // -----------------------------------------------------------------------
+    // Onboarding Wizard
+    // -----------------------------------------------------------------------
+    let wizardStep = 0;
+    const wizardAnswers = { startup_stage: null, founder_role: null, gaps: [] };
+
+    function renderOnboarding() {
+      contentEl.innerHTML = `
+        <div class="onboarding">
+          <div class="onboarding-header">
+            <div class="logo">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <h2>Build Your Advisory Team</h2>
+            <p>Answer 3 quick questions and we'll create a team of AI specialists tailored to you</p>
+          </div>
+          <div class="step-indicator" id="step-indicator">
+            <div class="step-dot active" id="dot-0"></div>
+            <div class="step-connector" id="conn-0"></div>
+            <div class="step-dot" id="dot-1"></div>
+            <div class="step-connector" id="conn-1"></div>
+            <div class="step-dot" id="dot-2"></div>
+          </div>
+
+          <!-- Step 0: Startup Stage -->
+          <div class="wizard-step active" id="wiz-0">
+            <h3>What stage is your startup?</h3>
+            <p class="step-desc">This helps calibrate the advice to your current reality</p>
+            <div class="option-grid">
+              <div class="option-item" data-group="stage" data-value="idea">
+                <span class="option-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><path d="M12 2v4"/><path d="m6.34 6.34 2.83 2.83"/><path d="M2 12h4"/><path d="m17.66 6.34-2.83 2.83"/><path d="M22 12h-4"/><path d="m6.34 17.66 2.83-2.83"/><path d="M12 22v-4"/><path d="m17.66 17.66-2.83-2.83"/></svg></span>
+                <span class="option-label">Idea</span>
+                <span class="option-hint">Still validating</span>
+              </div>
+              <div class="option-item" data-group="stage" data-value="pre-seed">
+                <span class="option-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+                <span class="option-label">Pre-seed</span>
+                <span class="option-hint">Building MVP</span>
+              </div>
+              <div class="option-item" data-group="stage" data-value="seed">
+                <span class="option-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/><path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z"/></svg></span>
+                <span class="option-label">Seed</span>
+                <span class="option-hint">Finding PMF</span>
+              </div>
+              <div class="option-item" data-group="stage" data-value="series-a">
+                <span class="option-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/><path d="M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7"/></svg></span>
+                <span class="option-label">Series A</span>
+                <span class="option-hint">Scaling up</span>
+              </div>
+              <div class="option-item" data-group="stage" data-value="growth">
+                <span class="option-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
+                <span class="option-label">Growth</span>
+                <span class="option-hint">Rapid expansion</span>
+              </div>
+              <div class="option-item" data-group="stage" data-value="scale">
+                <span class="option-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 7h10"/><path d="M7 12h10"/><path d="M7 17h10"/></svg></span>
+                <span class="option-label">Scale</span>
+                <span class="option-hint">Mature operations</span>
+              </div>
+            </div>
+            <div class="wizard-buttons">
+              <button class="primary" id="wiz-next-0" disabled>
+                Next
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Step 1: Founder Role -->
+          <div class="wizard-step" id="wiz-1">
+            <h3>What best describes your role?</h3>
+            <p class="step-desc">This shapes which gaps the team fills around you</p>
+            <div class="option-grid">
+              <div class="option-item" data-group="role" data-value="technical">
+                <span class="option-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></span>
+                <span class="option-label">Technical</span>
+                <span class="option-hint">Builder / Engineer</span>
+              </div>
+              <div class="option-item" data-group="role" data-value="business">
+                <span class="option-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></span>
+                <span class="option-label">Business</span>
+                <span class="option-hint">Strategy / Ops</span>
+              </div>
+              <div class="option-item" data-group="role" data-value="product">
+                <span class="option-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>
+                <span class="option-label">Product</span>
+                <span class="option-hint">Design / UX</span>
+              </div>
+              <div class="option-item" data-group="role" data-value="generalist">
+                <span class="option-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
+                <span class="option-label">Generalist</span>
+                <span class="option-hint">Jack of all trades</span>
+              </div>
+            </div>
+            <div class="wizard-buttons">
+              <button class="secondary" onclick="wizardBack()">Back</button>
+              <button class="primary" id="wiz-next-1" disabled>
+                Next
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Step 2: Gaps -->
+          <div class="wizard-step" id="wiz-2">
+            <h3>Where are your biggest gaps?</h3>
+            <p class="step-desc">Pick all that apply — we'll prioritize these specialists</p>
+            <div class="option-grid three-col">
+              <div class="option-item" data-group="gaps" data-value="strategy">
+                <span class="option-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>
+                <span class="option-label">Strategy</span>
+              </div>
+              <div class="option-item" data-group="gaps" data-value="growth">
+                <span class="option-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span>
+                <span class="option-label">Growth</span>
+              </div>
+              <div class="option-item" data-group="gaps" data-value="finance">
+                <span class="option-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+                <span class="option-label">Finance</span>
+              </div>
+              <div class="option-item" data-group="gaps" data-value="product">
+                <span class="option-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></span>
+                <span class="option-label">Product</span>
+              </div>
+              <div class="option-item" data-group="gaps" data-value="sales">
+                <span class="option-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>
+                <span class="option-label">Sales</span>
+              </div>
+              <div class="option-item" data-group="gaps" data-value="legal">
+                <span class="option-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+                <span class="option-label">Legal</span>
+              </div>
+              <div class="option-item" data-group="gaps" data-value="creative">
+                <span class="option-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg></span>
+                <span class="option-label">Creative</span>
+              </div>
+              <div class="option-item" data-group="gaps" data-value="tech">
+                <span class="option-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg></span>
+                <span class="option-label">Tech</span>
+              </div>
+            </div>
+            <div class="wizard-buttons">
+              <button class="secondary" onclick="wizardBack()">Back</button>
+              <button class="primary" id="wiz-build" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Build My Team
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Attach option click handlers
+      contentEl.querySelectorAll('.option-item').forEach(item => {
+        item.addEventListener('click', () => handleOptionClick(item));
+      });
+
+      document.getElementById('wiz-next-0').addEventListener('click', () => wizardNext());
+      document.getElementById('wiz-next-1').addEventListener('click', () => wizardNext());
+      document.getElementById('wiz-build').addEventListener('click', () => buildTeam());
+    }
+
+    function handleOptionClick(item) {
+      const group = item.dataset.group;
+      const value = item.dataset.value;
+
+      if (group === 'stage') {
+        item.closest('.option-grid').querySelectorAll('.option-item').forEach(o => o.classList.remove('selected'));
+        item.classList.add('selected');
+        wizardAnswers.startup_stage = value;
+        document.getElementById('wiz-next-0').disabled = false;
+      } else if (group === 'role') {
+        item.closest('.option-grid').querySelectorAll('.option-item').forEach(o => o.classList.remove('selected'));
+        item.classList.add('selected');
+        wizardAnswers.founder_role = value;
+        document.getElementById('wiz-next-1').disabled = false;
+      } else if (group === 'gaps') {
+        item.classList.toggle('selected');
+        const selected = item.closest('.option-grid').querySelectorAll('.option-item.selected');
+        wizardAnswers.gaps = Array.from(selected).map(s => s.dataset.value);
+        document.getElementById('wiz-build').disabled = wizardAnswers.gaps.length === 0;
+      }
+    }
+
+    function wizardNext() {
+      const currentStep = document.getElementById(`wiz-${wizardStep}`);
+      currentStep.classList.remove('active');
+
+      // Mark current dot as completed
+      document.getElementById(`dot-${wizardStep}`).classList.remove('active');
+      document.getElementById(`dot-${wizardStep}`).classList.add('completed');
+      document.getElementById(`conn-${wizardStep}`).classList.add('completed');
+
+      wizardStep++;
+
+      const nextStep = document.getElementById(`wiz-${wizardStep}`);
+      nextStep.classList.add('active');
+      document.getElementById(`dot-${wizardStep}`).classList.add('active');
+    }
+
+    function wizardBack() {
+      const currentStep = document.getElementById(`wiz-${wizardStep}`);
+      currentStep.classList.remove('active');
+      document.getElementById(`dot-${wizardStep}`).classList.remove('active');
+
+      wizardStep--;
+
+      document.getElementById(`dot-${wizardStep}`).classList.remove('completed');
+      document.getElementById(`dot-${wizardStep}`).classList.add('active');
+      document.getElementById(`conn-${wizardStep}`).classList.remove('completed');
+
+      const prevStep = document.getElementById(`wiz-${wizardStep}`);
+      prevStep.classList.add('active');
+    }
+
+    async function buildTeam() {
+      const btn = document.getElementById('wiz-build');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Building your team...';
+
+      try {
+        await window.pocketAgent.seedPersonas(wizardAnswers);
+        personas = await window.pocketAgent.listPersonas(false);
+        showToast('Your advisory team is ready!', 'success');
+        renderGrid();
+        headerActions.style.display = 'flex';
+        updateCount();
+      } catch (err) {
+        showToast('Failed to build team: ' + err.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Build My Team`;
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // Persona Grid
+    // -----------------------------------------------------------------------
+    function renderGrid() {
+      if (personas.length === 0) {
+        contentEl.innerHTML = `
+          <div class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:48px;height:48px;"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <p>No personas yet</p>
+            <p class="hint">Click "Add Persona" to create your first advisor</p>
+          </div>
+        `;
+        return;
+      }
+
+      // Sort: default first, then by sort_order, then by name
+      const sorted = [...personas].sort((a, b) => {
+        if (a.is_default && !b.is_default) return -1;
+        if (!a.is_default && b.is_default) return 1;
+        if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+        return a.name.localeCompare(b.name);
+      });
+
+      contentEl.innerHTML = `<div class="persona-grid">${sorted.map(p => renderCard(p)).join('')}</div>`;
+
+      // Attach toggle handlers
+      contentEl.querySelectorAll('.toggle input').forEach(toggle => {
+        toggle.addEventListener('change', (e) => {
+          const id = e.target.dataset.id;
+          const active = e.target.checked;
+          handleToggle(id, active);
+        });
+      });
+    }
+
+    function renderCard(p) {
+      const bgColor = p.color || '#a855f7';
+      // Get initials for the dot
+      const initials = p.name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+
+      return `
+        <div class="persona-card ${p.is_default ? 'is-default' : ''}" data-id="${p.id}">
+          <div class="persona-card-top">
+            <div class="persona-dot" style="background: ${bgColor}20; color: ${bgColor}; border: 1.5px solid ${bgColor}40;">
+              ${initials}
+            </div>
+            <div class="persona-info">
+              <div class="persona-name">
+                ${p.name}
+                ${p.is_default ? '<span class="default-badge">Default</span>' : ''}
+              </div>
+              <div class="persona-role">${p.role_title || ''}</div>
+            </div>
+          </div>
+          <div class="persona-description">${p.description || ''}</div>
+          <div class="persona-card-actions">
+            <div class="persona-card-buttons">
+              <button class="card-btn" onclick="openEditModal('${p.id}')">Edit</button>
+              ${!p.is_default ? `<button class="card-btn set-default" onclick="handleSetDefault('${p.id}')">Set Default</button>` : ''}
+              ${!p.is_default ? `<button class="card-btn delete" onclick="handleDelete('${p.id}', '${p.name.replace(/'/g, "\\'")}')">Delete</button>` : ''}
+            </div>
+            <label class="toggle" title="${p.is_active ? 'Active' : 'Inactive'}">
+              <input type="checkbox" ${p.is_active ? 'checked' : ''} data-id="${p.id}">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      `;
+    }
+
+    // -----------------------------------------------------------------------
+    // Card Actions
+    // -----------------------------------------------------------------------
+    async function handleToggle(id, active) {
+      try {
+        await window.pocketAgent.updatePersona(id, { is_active: active });
+        const persona = personas.find(p => p.id === id);
+        if (persona) persona.is_active = active;
+        updateCount();
+        showToast(`${active ? 'Activated' : 'Deactivated'} persona`, 'success');
+      } catch (err) {
+        showToast('Failed to update: ' + err.message, 'error');
+        // Revert toggle
+        const toggle = contentEl.querySelector(`input[data-id="${id}"]`);
+        if (toggle) toggle.checked = !active;
+      }
+    }
+
+    async function handleSetDefault(id) {
+      try {
+        await window.pocketAgent.setDefaultPersona(id);
+        personas = await window.pocketAgent.listPersonas(false);
+        renderGrid();
+        updateCount();
+        showToast('Default persona updated', 'success');
+      } catch (err) {
+        showToast('Failed to set default: ' + err.message, 'error');
+      }
+    }
+
+    function handleDelete(id, name) {
+      showConfirm(
+        'Delete Persona',
+        `Remove "${name}" from your team? This cannot be undone.`,
+        'Delete',
+        async () => {
+          try {
+            await window.pocketAgent.deletePersona(id);
+            personas = personas.filter(p => p.id !== id);
+            renderGrid();
+            updateCount();
+            showToast('Persona deleted', 'success');
+          } catch (err) {
+            showToast('Failed to delete: ' + err.message, 'error');
+          }
+        }
+      );
+    }
+
+    // -----------------------------------------------------------------------
+    // Edit / Create Modal
+    // -----------------------------------------------------------------------
+    function openEditModal(id) {
+      editingPersonaId = id || null;
+      const persona = id ? personas.find(p => p.id === id) : null;
+
+      document.getElementById('modal-title').textContent = persona ? 'Edit Persona' : 'Add Custom Persona';
+      document.getElementById('modal-save-btn').textContent = persona ? 'Save Changes' : 'Create Persona';
+
+      document.getElementById('field-name').value = persona?.name || '';
+      document.getElementById('field-slug').value = persona?.slug || '';
+      document.getElementById('field-role').value = persona?.role_title || '';
+      document.getElementById('field-icon').value = persona?.icon || '';
+      document.getElementById('field-color').value = persona?.color || '#a855f7';
+      document.getElementById('field-color-picker').value = persona?.color || '#a855f7';
+      document.getElementById('field-description').value = persona?.description || '';
+      document.getElementById('field-identity').value = persona?.identity || '';
+      document.getElementById('field-instructions').value = persona?.instructions || '';
+
+      modalOverlay.classList.add('visible');
+    }
+
+    function closeModal() {
+      modalOverlay.classList.remove('visible');
+      editingPersonaId = null;
+    }
+
+    async function saveModal() {
+      const name = document.getElementById('field-name').value.trim();
+      const slug = document.getElementById('field-slug').value.trim();
+      const role_title = document.getElementById('field-role').value.trim();
+      const icon = document.getElementById('field-icon').value.trim();
+      const color = document.getElementById('field-color').value.trim();
+      const description = document.getElementById('field-description').value.trim();
+      const identity = document.getElementById('field-identity').value.trim();
+      const instructions = document.getElementById('field-instructions').value.trim();
+
+      if (!name || !slug) {
+        showToast('Name and slug are required', 'error');
+        return;
+      }
+
+      const saveBtn = document.getElementById('modal-save-btn');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+
+      try {
+        if (editingPersonaId) {
+          await window.pocketAgent.updatePersona(editingPersonaId, {
+            name, slug, icon, color, role_title, description, identity, instructions,
+          });
+          showToast('Persona updated', 'success');
+        } else {
+          await window.pocketAgent.createPersona({
+            name, slug, icon, color, role_title, description, identity, instructions,
+            system_prompt_prefix: '',
+            is_default: false,
+            is_active: true,
+            sort_order: personas.length,
+          });
+          showToast('Persona created', 'success');
+        }
+
+        personas = await window.pocketAgent.listPersonas(false);
+        renderGrid();
+        updateCount();
+        closeModal();
+      } catch (err) {
+        showToast('Failed to save: ' + err.message, 'error');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = editingPersonaId ? 'Save Changes' : 'Create Persona';
+      }
+    }
+
+    // Color picker sync
+    document.getElementById('field-color-picker').addEventListener('input', (e) => {
+      document.getElementById('field-color').value = e.target.value;
+    });
+    document.getElementById('field-color').addEventListener('input', (e) => {
+      const v = e.target.value;
+      if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+        document.getElementById('field-color-picker').value = v;
+      }
+    });
+
+    // Modal buttons
+    document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+    document.getElementById('modal-cancel-btn').addEventListener('click', closeModal);
+    document.getElementById('modal-save-btn').addEventListener('click', saveModal);
+    modalOverlay.addEventListener('click', (e) => {
+      if (e.target === modalOverlay) closeModal();
+    });
+
+    // -----------------------------------------------------------------------
+    // Confirm Dialog
+    // -----------------------------------------------------------------------
+    function showConfirm(title, message, actionLabel, callback) {
+      document.getElementById('confirm-title').textContent = title;
+      document.getElementById('confirm-message').textContent = message;
+      document.getElementById('confirm-action-btn').textContent = actionLabel;
+      confirmCallback = callback;
+      confirmOverlayEl.classList.add('visible');
+    }
+
+    function closeConfirm() {
+      confirmOverlayEl.classList.remove('visible');
+      confirmCallback = null;
+    }
+
+    document.getElementById('confirm-cancel-btn').addEventListener('click', closeConfirm);
+    document.getElementById('confirm-action-btn').addEventListener('click', async () => {
+      if (confirmCallback) {
+        await confirmCallback();
+      }
+      closeConfirm();
+    });
+    confirmOverlayEl.addEventListener('click', (e) => {
+      if (e.target === confirmOverlayEl) closeConfirm();
+    });
+
+    // -----------------------------------------------------------------------
+    // Header Actions
+    // -----------------------------------------------------------------------
+    document.getElementById('add-btn').addEventListener('click', () => openEditModal(null));
+    document.getElementById('reset-btn').addEventListener('click', () => {
+      showConfirm(
+        'Reset to Defaults',
+        'This will delete all your current personas and set up the default team. Are you sure?',
+        'Reset',
+        async () => {
+          try {
+            // Delete all existing personas
+            for (const p of personas) {
+              await window.pocketAgent.deletePersona(p.id);
+            }
+            personas = [];
+            renderOnboarding();
+            headerActions.style.display = 'none';
+            updateCount();
+            showToast('Personas cleared — set up your new team', 'success');
+          } catch (err) {
+            showToast('Failed to reset: ' + err.message, 'error');
+          }
+        }
+      );
+    });
+
+    // -----------------------------------------------------------------------
+    // Toast
+    // -----------------------------------------------------------------------
+    function showToast(message, type = 'info') {
+      const existing = document.querySelector('.toast');
+      if (existing) existing.remove();
+
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+
+      setTimeout(() => {
+        toast.classList.add('exiting');
+        setTimeout(() => toast.remove(), 300);
+      }, 2500);
+    }
+
+    // -----------------------------------------------------------------------
+    // Keyboard shortcuts
+    // -----------------------------------------------------------------------
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (confirmOverlayEl.classList.contains('visible')) {
+          closeConfirm();
+        } else if (modalOverlay.classList.contains('visible')) {
+          closeModal();
+        }
+      }
+    });
+
+    // -----------------------------------------------------------------------
+    // Boot
+    // -----------------------------------------------------------------------
+    init();
+  </script>
+</body>
+</html>

@@ -5,6 +5,9 @@ import { loadIdentity } from '../config/identity';
 import { loadInstructions } from '../config/instructions';
 import { SettingsManager } from '../settings';
 import { EventEmitter } from 'events';
+import { PersonaManager } from '../personas';
+import { PersonaRouter } from '../personas/router';
+import type { Persona } from '../personas/types';
 
 // Token limits - defaults, can be overridden by settings
 const DEFAULT_MAX_CONTEXT_TOKENS = 150000;
@@ -217,6 +220,7 @@ class AgentManagerClass extends EventEmitter {
   private processingBySession: Map<string, boolean> = new Map();
   private lastSuggestedPrompt: string | undefined = undefined;
   private messageQueueBySession: Map<string, Array<{ message: string; channel: string; images?: ImageContent[]; attachmentInfo?: AttachmentInfo; resolve: (result: ProcessResult) => void; reject: (error: Error) => void }>> = new Map();
+  private personaRouter: PersonaRouter | null = null;
 
   private constructor() {
     super();
@@ -242,6 +246,20 @@ class AgentManagerClass extends EventEmitter {
     this.memory.setSummarizer(this.createSummary.bind(this));
     setMemoryManager(this.memory);
     setSoulMemoryManager(this.memory);
+
+    // Initialize persona system
+    PersonaManager.initialize(this.memory);
+    if (!PersonaManager.hasPersonas()) {
+      PersonaManager.seedDefaults();
+      console.log('[AgentManager] Seeded default personas');
+    }
+    this.personaRouter = new PersonaRouter({
+      getPersonas: () => PersonaManager.getAll(),
+      getBySlug: (slug: string) => PersonaManager.getBySlug(slug),
+      getDefault: () => PersonaManager.getDefault(),
+      getAllKeywords: () => this.memory!.getAllRoutingKeywords(),
+    });
+    console.log('[AgentManager] Persona router initialized with', PersonaManager.getAll(false).length, 'personas');
 
     console.log('[AgentManager] Initialized');
     console.log('[AgentManager] Project root:', this.projectRoot);
@@ -293,7 +311,8 @@ class AgentManagerClass extends EventEmitter {
     channel: string = 'default',
     sessionId: string = 'default',
     images?: ImageContent[],
-    attachmentInfo?: AttachmentInfo
+    attachmentInfo?: AttachmentInfo,
+    personaId?: string
   ): Promise<ProcessResult> {
     if (!this.memory) {
       throw new Error('AgentManager not initialized - call initialize() first');
@@ -304,7 +323,7 @@ class AgentManagerClass extends EventEmitter {
       return this.queueMessage(userMessage, channel, sessionId, images, attachmentInfo);
     }
 
-    return this.executeMessage(userMessage, channel, sessionId, images, attachmentInfo);
+    return this.executeMessage(userMessage, channel, sessionId, images, attachmentInfo, personaId);
   }
 
   /**
@@ -373,7 +392,8 @@ class AgentManagerClass extends EventEmitter {
     channel: string,
     sessionId: string,
     images?: ImageContent[],
-    attachmentInfo?: AttachmentInfo
+    attachmentInfo?: AttachmentInfo,
+    personaId?: string
   ): Promise<ProcessResult> {
     // Memory should already be checked by processMessage, but guard anyway
     if (!this.memory) {
@@ -444,7 +464,34 @@ class AgentManagerClass extends EventEmitter {
         ? userMessages[userMessages.length - 1].timestamp
         : undefined;
 
-      const options = await this.buildOptions(factsContext, soulContext, abortController, lastUserMessageTimestamp);
+      // Resolve persona for this message
+      let resolvedPersona: Persona | undefined;
+      if (personaId) {
+        resolvedPersona = PersonaManager.getById(personaId) ?? undefined;
+      } else if (this.personaRouter && PersonaManager.hasPersonas()) {
+        try {
+          const route = this.personaRouter.route(userMessage);
+          resolvedPersona = route.persona;
+          if (route.strippedMessage) {
+            userMessage = route.strippedMessage;
+          }
+          this.emit('persona', {
+            id: route.persona.id,
+            name: route.persona.name,
+            color: route.persona.color,
+            icon: route.persona.icon,
+            method: route.method,
+          });
+          if (route.method !== 'default') {
+            console.log(`[AgentManager] Routed to persona: ${route.persona.name} (${route.method}, confidence: ${route.confidence.toFixed(2)})`);
+          }
+        } catch {
+          // If routing fails, continue without persona
+          console.warn('[AgentManager] Persona routing failed, using default identity');
+        }
+      }
+
+      const options = await this.buildOptions(factsContext, soulContext, abortController, lastUserMessageTimestamp, resolvedPersona);
 
       // Configure provider environment based on model (sets ANTHROPIC_BASE_URL, AUTH_TOKEN, etc.)
       configureProviderEnvironment(this.model);
@@ -662,19 +709,30 @@ class AgentManagerClass extends EventEmitter {
     return false;
   }
 
-  private async buildOptions(factsContext: string, soulContext: string, abortController: AbortController, lastMessageTimestamp?: string): Promise<SDKOptions> {
+  private async buildOptions(factsContext: string, soulContext: string, abortController: AbortController, lastMessageTimestamp?: string, persona?: Persona): Promise<SDKOptions> {
     const appendParts: string[] = [];
 
     // Add temporal context first (current time awareness)
     const temporalContext = this.buildTemporalContext(lastMessageTimestamp);
     appendParts.push(temporalContext);
 
-    if (this.instructions) {
-      appendParts.push(this.instructions);
+    // Add persona role context if active
+    if (persona?.system_prompt_prefix) {
+      appendParts.push(persona.system_prompt_prefix);
     }
 
-    if (this.identity) {
-      appendParts.push(this.identity);
+    // Merge instructions: base instructions + persona-specific instructions
+    const effectiveInstructions = persona?.instructions
+      ? `${this.instructions}\n\n${persona.instructions}`
+      : this.instructions;
+    if (effectiveInstructions) {
+      appendParts.push(effectiveInstructions);
+    }
+
+    // Use persona identity if available, otherwise fall back to default
+    const effectiveIdentity = persona ? persona.identity : this.identity;
+    if (effectiveIdentity) {
+      appendParts.push(effectiveIdentity);
     }
 
     // Add user profile from settings

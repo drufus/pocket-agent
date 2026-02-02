@@ -12,3 +12,6 @@ dist/
 config.json
 release/
 *.cer
+
+# Research docs
+research_*.md

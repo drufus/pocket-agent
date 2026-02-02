@@ -28,6 +28,9 @@
       --success: #22c55e;
       --radius: 20px;
       --radius-sm: 10px;
+      --text-tertiary: #48484a;
+      --border-hover: #3a3a3d;
+      --accent-dim: rgba(168, 85, 247, 0.12);
     }
 
     * {
@@ -1525,6 +1528,112 @@
       max-height: 150px;
       border-radius: 6px;
     }
+
+    /* Persona Bar */
+    .persona-bar {
+      padding: 6px 16px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .persona-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-family: 'Sora', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .persona-pill:hover {
+      border-color: var(--border-hover);
+      color: var(--text-primary);
+    }
+
+    .persona-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #a855f7;
+    }
+
+    .persona-dropdown {
+      display: none;
+      position: absolute;
+      bottom: 100%;
+      left: 16px;
+      margin-bottom: 4px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 4px;
+      min-width: 200px;
+      max-height: 300px;
+      overflow-y: auto;
+      z-index: 100;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+    }
+
+    .persona-dropdown.show { display: block; }
+
+    .persona-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s;
+      border: none;
+      background: none;
+      color: var(--text-primary);
+      font-size: 12px;
+      font-family: 'Sora', sans-serif;
+      width: 100%;
+      text-align: left;
+    }
+
+    .persona-option:hover { background: var(--bg-tertiary); }
+
+    .persona-option .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .persona-option .info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .persona-option .name { font-weight: 500; }
+    .persona-option .role { font-size: 10px; color: var(--text-tertiary); }
+
+    .persona-option.active { background: var(--accent-dim); }
+
+    /* Persona Badge on Messages */
+    .persona-badge {
+      font-size: 10px;
+      margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      opacity: 0.7;
+    }
+
+    .persona-badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
   </style>
 </head>
 <body>
@@ -1563,6 +1672,15 @@
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
             </svg>
             My Approach
+          </button>
+          <button class="menu-item" onclick="playNormalClick(); window.pocketAgent.openPersonas(); closeMenu();">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            My Team
           </button>
           <button class="menu-item" onclick="playNormalClick(); openFactsGraph(); closeMenu();">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1668,6 +1786,15 @@
   </div>
 
   <div id="messages"></div>
+
+  <div class="persona-bar" id="persona-bar" style="display: none;">
+    <button class="persona-pill" id="persona-pill" onclick="togglePersonaDropdown()">
+      <span class="persona-dot" id="persona-dot"></span>
+      <span class="persona-label" id="persona-label">Chief of Staff</span>
+      <svg width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+    <div class="persona-dropdown" id="persona-dropdown"></div>
+  </div>
 
   <div id="input-area">
     <div class="input-container">
@@ -1856,6 +1983,9 @@
         handleTelegramMessage(data);
       });
       console.log('[Chat] Telegram message listener set up');
+
+      // Load personas for the persona selector
+      await loadPersonas();
     });
 
     // ============ SESSION MANAGEMENT ============
@@ -2488,7 +2618,7 @@
 
       try {
         // This will resolve when the message is actually processed (not when queued)
-        const result = await window.pocketAgent.send(fullMessage, sessionId);
+        const result = await window.pocketAgent.send(fullMessage, sessionId, selectedPersonaId);
 
         // If this message was queued, remove the queued state
         if (queuedMessageElements.has(messageId)) {
@@ -2532,7 +2662,15 @@
           }
 
           if (result.success) {
-            addMessage('assistant', result.response);
+            const assistantMsgEl = addMessage('assistant', result.response);
+            if (currentPersonaInfo && assistantMsgEl) {
+              const badgeDiv = document.createElement('div');
+              badgeDiv.className = 'persona-badge';
+              badgeDiv.style.color = currentPersonaInfo.color;
+              badgeDiv.innerHTML = `<span class="persona-badge-dot" style="background: ${currentPersonaInfo.color}"></span>${currentPersonaInfo.name}`;
+              assistantMsgEl.insertBefore(badgeDiv, assistantMsgEl.firstChild);
+              currentPersonaInfo = null;
+            }
 
             // If there's a suggested prompt, show it as ghost text
             if (result.suggestedPrompt) {
@@ -3324,6 +3462,77 @@
 
     function closeAbout() {
       document.getElementById('about-modal').classList.remove('show');
+    }
+
+    // ============ PERSONA SUPPORT ============
+
+    let personas = [];
+    let selectedPersonaId = null;
+    let currentPersonaInfo = null;
+
+    async function loadPersonas() {
+      try {
+        personas = await window.pocketAgent.listPersonas();
+        if (personas.length > 0) {
+          document.getElementById('persona-bar').style.display = 'flex';
+          const defaultPersona = personas.find(p => p.is_default) || personas[0];
+          setActivePersona(defaultPersona.id);
+          renderPersonaDropdown();
+        }
+      } catch (e) {
+        console.error('Failed to load personas:', e);
+      }
+    }
+
+    function setActivePersona(id) {
+      const persona = personas.find(p => p.id === id);
+      if (!persona) return;
+      selectedPersonaId = id === personas.find(p => p.is_default)?.id ? null : id;
+      document.getElementById('persona-dot').style.background = persona.color;
+      document.getElementById('persona-label').textContent = persona.name;
+      renderPersonaDropdown();
+    }
+
+    function renderPersonaDropdown() {
+      const dropdown = document.getElementById('persona-dropdown');
+      const defaultId = personas.find(p => p.is_default)?.id;
+      const activeId = selectedPersonaId || defaultId;
+      dropdown.innerHTML = personas.map(p => `
+        <button class="persona-option ${p.id === activeId ? 'active' : ''}" onclick="selectPersona('${p.id}')">
+          <span class="dot" style="background: ${p.color}"></span>
+          <span class="info">
+            <span class="name">${p.name}</span>
+            <span class="role">${p.role_title}</span>
+          </span>
+        </button>
+      `).join('');
+    }
+
+    function togglePersonaDropdown() {
+      const dropdown = document.getElementById('persona-dropdown');
+      dropdown.classList.toggle('show');
+    }
+
+    function selectPersona(id) {
+      playNormalClick();
+      setActivePersona(id);
+      document.getElementById('persona-dropdown').classList.remove('show');
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      const pill = document.getElementById('persona-pill');
+      const dropdown = document.getElementById('persona-dropdown');
+      if (pill && dropdown && !pill.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.classList.remove('show');
+      }
+    });
+
+    // Listen for persona routing events
+    if (window.pocketAgent.onPersona) {
+      window.pocketAgent.onPersona((info) => {
+        currentPersonaInfo = info;
+      });
     }
   </script>
 </body>

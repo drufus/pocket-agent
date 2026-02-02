@@ -3,7 +3,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 // Expose API to renderer process
 contextBridge.exposeInMainWorld('pocketAgent', {
   // Chat
-  send: (message: string, sessionId?: string) => ipcRenderer.invoke('agent:send', message, sessionId),
+  send: (message: string, sessionId?: string, personaId?: string) => ipcRenderer.invoke('agent:send', message, sessionId, personaId),
   stop: (sessionId?: string) => ipcRenderer.invoke('agent:stop', sessionId),
   onStatus: (callback: (status: { type: string; toolName?: string; toolInput?: string; message?: string }) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, status: { type: string; toolName?: string; toolInput?: string; message?: string }) => callback(status);
@@ -50,7 +50,24 @@ contextBridge.exposeInMainWorld('pocketAgent', {
   openSoul: () => ipcRenderer.invoke('app:openSoul'),
   openCustomize: () => ipcRenderer.invoke('app:openCustomize'),
   openRoutines: () => ipcRenderer.invoke('app:openRoutines'),
+  openPersonas: () => ipcRenderer.invoke('app:openPersonas'),
   openExternal: (url: string) => ipcRenderer.invoke('app:openExternal', url),
+
+  // Personas
+  listPersonas: (activeOnly?: boolean) => ipcRenderer.invoke('personas:list', activeOnly),
+  getPersona: (id: string) => ipcRenderer.invoke('personas:get', id),
+  createPersona: (data: Record<string, unknown>) => ipcRenderer.invoke('personas:create', data),
+  updatePersona: (id: string, updates: Record<string, unknown>) => ipcRenderer.invoke('personas:update', id, updates),
+  deletePersona: (id: string) => ipcRenderer.invoke('personas:delete', id),
+  setDefaultPersona: (id: string) => ipcRenderer.invoke('personas:setDefault', id),
+  seedPersonas: (answers?: Record<string, unknown>) => ipcRenderer.invoke('personas:seed', answers),
+  getPersonaKeywords: (personaId: string) => ipcRenderer.invoke('personas:getKeywords', personaId),
+  setPersonaKeywords: (personaId: string, keywords: Array<{ keyword: string; weight?: number }>) => ipcRenderer.invoke('personas:setKeywords', personaId, keywords),
+  onPersona: (callback: (info: { id: string; name: string; color: string; icon: string; method: string }) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, info: { id: string; name: string; color: string; icon: string; method: string }) => callback(info);
+    ipcRenderer.on('agent:persona', listener);
+    return () => ipcRenderer.removeListener('agent:persona', listener);
+  },
 
   // Customize
   getIdentity: () => ipcRenderer.invoke('customize:getIdentity'),

@@ -1,4 +1,5 @@
 import Database from 'better-sqlite3';
+import type { Persona, PersonaRoutingKeyword } from '../personas/types';
 import {
   initEmbeddings,
   hasEmbeddings,
@@ -332,6 +333,38 @@ export class MemoryManager {
 
       -- Unique constraint on session names (for Telegram group linking)
       CREATE UNIQUE INDEX IF NOT EXISTS idx_sessions_name_unique ON sessions(name);
+
+      -- Personas for multi-persona system
+      CREATE TABLE IF NOT EXISTS personas (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        slug TEXT NOT NULL UNIQUE,
+        icon TEXT NOT NULL DEFAULT 'briefcase',
+        color TEXT NOT NULL DEFAULT '#a855f7',
+        role_title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        identity TEXT NOT NULL,
+        instructions TEXT NOT NULL DEFAULT '',
+        system_prompt_prefix TEXT NOT NULL DEFAULT '',
+        is_default INTEGER DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        sort_order INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ')),
+        updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ'))
+      );
+
+      -- Keywords for persona intent-based routing
+      CREATE TABLE IF NOT EXISTS persona_routing_keywords (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        persona_id TEXT NOT NULL REFERENCES personas(id) ON DELETE CASCADE,
+        keyword TEXT NOT NULL,
+        weight REAL DEFAULT 1.0
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_personas_slug ON personas(slug);
+      CREATE INDEX IF NOT EXISTS idx_personas_active ON personas(is_active);
+      CREATE INDEX IF NOT EXISTS idx_routing_keywords_persona ON persona_routing_keywords(persona_id);
+      CREATE INDEX IF NOT EXISTS idx_routing_keywords_keyword ON persona_routing_keywords(keyword);
     `);
 
     // Create FTS5 virtual table for keyword search
@@ -2059,6 +2092,178 @@ export class MemoryManager {
     this.soulContextCache = result;
     this.soulContextCacheValid = true;
     return result;
+  }
+
+  // ============ PERSONA METHODS ============
+
+  /**
+   * Map a raw persona row (with INTEGER booleans) to a Persona object.
+   */
+  private mapPersonaRow(row: Record<string, unknown>): Persona {
+    return {
+      ...(row as unknown as Persona),
+      is_default: !!(row.is_default as number),
+      is_active: !!(row.is_active as number),
+    };
+  }
+
+  /**
+   * Get all personas, optionally filtered to active-only.
+   */
+  getPersonas(activeOnly: boolean = true): Persona[] {
+    const query = activeOnly
+      ? 'SELECT * FROM personas WHERE is_active = 1 ORDER BY sort_order, name'
+      : 'SELECT * FROM personas ORDER BY sort_order, name';
+    const rows = this.db.prepare(query).all() as Array<Record<string, unknown>>;
+    return rows.map(row => this.mapPersonaRow(row));
+  }
+
+  /**
+   * Get a persona by its primary key.
+   */
+  getPersonaById(id: string): Persona | null {
+    const row = this.db.prepare('SELECT * FROM personas WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+    return row ? this.mapPersonaRow(row) : null;
+  }
+
+  /**
+   * Get a persona by its unique slug.
+   */
+  getPersonaBySlug(slug: string): Persona | null {
+    const row = this.db.prepare('SELECT * FROM personas WHERE slug = ?').get(slug) as Record<string, unknown> | undefined;
+    return row ? this.mapPersonaRow(row) : null;
+  }
+
+  /**
+   * Get the default persona (is_default = 1 and is_active = 1).
+   */
+  getDefaultPersona(): Persona | null {
+    const row = this.db.prepare(
+      'SELECT * FROM personas WHERE is_default = 1 AND is_active = 1 LIMIT 1'
+    ).get() as Record<string, unknown> | undefined;
+    return row ? this.mapPersonaRow(row) : null;
+  }
+
+  /**
+   * Insert or replace a persona.
+   */
+  savePersona(persona: Omit<Persona, 'created_at' | 'updated_at'>): void {
+    this.db.prepare(`
+      INSERT OR REPLACE INTO personas
+        (id, name, slug, icon, color, role_title, description, identity, instructions, system_prompt_prefix, is_default, is_active, sort_order, created_at, updated_at)
+      VALUES
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (strftime('%Y-%m-%dT%H:%M:%fZ')), (strftime('%Y-%m-%dT%H:%M:%fZ')))
+    `).run(
+      persona.id,
+      persona.name,
+      persona.slug,
+      persona.icon,
+      persona.color,
+      persona.role_title,
+      persona.description,
+      persona.identity,
+      persona.instructions,
+      persona.system_prompt_prefix,
+      persona.is_default ? 1 : 0,
+      persona.is_active ? 1 : 0,
+      persona.sort_order,
+    );
+  }
+
+  /**
+   * Partially update a persona by id.
+   * Returns true if a row was changed.
+   */
+  updatePersona(id: string, updates: Partial<Persona>): boolean {
+    // Build dynamic SET clause from provided fields
+    const allowedFields = [
+      'name', 'slug', 'icon', 'color', 'role_title', 'description',
+      'identity', 'instructions', 'system_prompt_prefix',
+      'is_default', 'is_active', 'sort_order',
+    ] as const;
+
+    const setClauses: string[] = [];
+    const values: unknown[] = [];
+
+    for (const field of allowedFields) {
+      if (field in updates) {
+        const value = updates[field as keyof Persona];
+        if (field === 'is_default' || field === 'is_active') {
+          setClauses.push(`${field} = ?`);
+          values.push(value ? 1 : 0);
+        } else {
+          setClauses.push(`${field} = ?`);
+          values.push(value);
+        }
+      }
+    }
+
+    if (setClauses.length === 0) {
+      return false;
+    }
+
+    // Always update the timestamp
+    setClauses.push("updated_at = (strftime('%Y-%m-%dT%H:%M:%fZ'))");
+    values.push(id);
+
+    const sql = `UPDATE personas SET ${setClauses.join(', ')} WHERE id = ?`;
+    const result = this.db.prepare(sql).run(...values);
+    return result.changes > 0;
+  }
+
+  /**
+   * Delete a persona by id.
+   * Routing keywords are removed automatically via ON DELETE CASCADE.
+   */
+  deletePersona(id: string): boolean {
+    const result = this.db.prepare('DELETE FROM personas WHERE id = ?').run(id);
+    return result.changes > 0;
+  }
+
+  /**
+   * Set a persona as the default, clearing the flag on all others.
+   */
+  setDefaultPersona(id: string): void {
+    const txn = this.db.transaction(() => {
+      this.db.prepare('UPDATE personas SET is_default = 0').run();
+      this.db.prepare('UPDATE personas SET is_default = 1 WHERE id = ?').run(id);
+    });
+    txn();
+  }
+
+  /**
+   * Get routing keywords for a specific persona.
+   */
+  getRoutingKeywords(personaId: string): PersonaRoutingKeyword[] {
+    return this.db.prepare(
+      'SELECT * FROM persona_routing_keywords WHERE persona_id = ?'
+    ).all(personaId) as PersonaRoutingKeyword[];
+  }
+
+  /**
+   * Get all routing keywords (for the router to cache).
+   */
+  getAllRoutingKeywords(): PersonaRoutingKeyword[] {
+    return this.db.prepare(
+      'SELECT * FROM persona_routing_keywords'
+    ).all() as PersonaRoutingKeyword[];
+  }
+
+  /**
+   * Replace all routing keywords for a persona.
+   */
+  setRoutingKeywords(personaId: string, keywords: Array<{ keyword: string; weight?: number }>): void {
+    const txn = this.db.transaction(() => {
+      this.db.prepare('DELETE FROM persona_routing_keywords WHERE persona_id = ?').run(personaId);
+
+      const insert = this.db.prepare(
+        'INSERT INTO persona_routing_keywords (persona_id, keyword, weight) VALUES (?, ?, ?)'
+      );
+      for (const kw of keywords) {
+        insert.run(personaId, kw.keyword, kw.weight ?? 1.0);
+      }
+    });
+    txn();
   }
 
   close(): void {

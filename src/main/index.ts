@@ -11,6 +11,7 @@ import { loadIdentity, saveIdentity, getIdentityPath } from '../config/identity'
 import { loadInstructions, saveInstructions, getInstructionsPath } from '../config/instructions';
 import { closeTaskDb } from '../tools';
 import { initializeUpdater, setupUpdaterIPC, setSettingsWindow } from './updater';
+import { PersonaManager } from '../personas';
 import cityTimezones from 'city-timezones';
 
 // Handle EPIPE errors gracefully (happens when stdout pipe is closed)
@@ -157,6 +158,7 @@ let customizeWindow: BrowserWindow | null = null;
 let factsWindow: BrowserWindow | null = null;
 let soulWindow: BrowserWindow | null = null;
 let skillsSetupWindow: BrowserWindow | null = null;
+let personasWindow: BrowserWindow | null = null;
 let splashWindow: BrowserWindow | null = null;
 
 /**
@@ -995,6 +997,58 @@ function createSkillsSetupWindow(): void {
   });
 }
 
+function openPersonasWindow(): void {
+  if (personasWindow && !personasWindow.isDestroyed()) {
+    personasWindow.focus();
+    return;
+  }
+
+  const savedBoundsJson = SettingsManager.get('window.personasBounds');
+  let windowOptions: Electron.BrowserWindowConstructorOptions = {
+    width: 750,
+    height: 600,
+    title: 'My Team - Pocket Agent',
+    backgroundColor: '#0a0a0b',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+    show: false,
+  };
+
+  if (savedBoundsJson) {
+    try {
+      const savedBounds = JSON.parse(savedBoundsJson);
+      if (savedBounds.x !== undefined) windowOptions.x = savedBounds.x;
+      if (savedBounds.y !== undefined) windowOptions.y = savedBounds.y;
+      if (savedBounds.width) windowOptions.width = savedBounds.width;
+      if (savedBounds.height) windowOptions.height = savedBounds.height;
+    } catch { /* ignore */ }
+  }
+
+  personasWindow = new BrowserWindow(windowOptions);
+
+  personasWindow.loadFile(path.join(__dirname, '../../ui/personas.html'));
+
+  personasWindow.once('ready-to-show', () => {
+    personasWindow?.show();
+  });
+
+  const saveBounds = () => {
+    if (personasWindow && !personasWindow.isDestroyed()) {
+      SettingsManager.set('window.personasBounds', JSON.stringify(personasWindow.getBounds()));
+    }
+  };
+  personasWindow.on('moved', saveBounds);
+  personasWindow.on('resized', saveBounds);
+  personasWindow.on('close', saveBounds);
+
+  personasWindow.on('closed', () => {
+    personasWindow = null;
+  });
+}
+
 function showNotification(title: string, body: string): void {
   if (Notification.isSupported()) {
     new Notification({ title, body }).show();
@@ -1019,8 +1073,8 @@ function setupIPC(): void {
   });
 
   // Chat messages with status streaming
-  ipcMain.handle('agent:send', async (event, message: string, sessionId?: string) => {
-    console.log(`[IPC] agent:send received sessionId: ${sessionId}`);
+  ipcMain.handle('agent:send', async (event, message: string, sessionId?: string, personaId?: string) => {
+    console.log(`[IPC] agent:send received sessionId: ${sessionId}, personaId: ${personaId || 'auto'}`);
     // Set up status listener to forward to renderer
     const statusHandler = (status: { type: string; toolName?: string; toolInput?: string; message?: string }) => {
       // Send status update to the chat window that initiated the request
@@ -1030,10 +1084,19 @@ function setupIPC(): void {
       }
     };
 
+    // Set up persona listener to forward routing info to renderer
+    const personaHandler = (personaInfo: { id: string; name: string; color: string; icon: string; method: string }) => {
+      const webContents = event.sender;
+      if (!webContents.isDestroyed()) {
+        webContents.send('agent:persona', personaInfo);
+      }
+    };
+
     AgentManager.on('status', statusHandler);
+    AgentManager.on('persona', personaHandler);
 
     try {
-      const result = await AgentManager.processMessage(message, 'desktop', sessionId || 'default');
+      const result = await AgentManager.processMessage(message, 'desktop', sessionId || 'default', undefined, undefined, personaId);
       updateTrayMenu();
 
       // Sync to Telegram (Desktop -> Telegram) - only to the linked chat for this session
@@ -1058,6 +1121,7 @@ function setupIPC(): void {
       return { success: false, error: errorMsg };
     } finally {
       AgentManager.off('status', statusHandler);
+      AgentManager.off('persona', personaHandler);
     }
   });
 
@@ -1146,6 +1210,54 @@ function setupIPC(): void {
     if (!memory) return { success: false };
     const success = memory.deleteSoulAspectById(id);
     return { success };
+  });
+
+  // Personas
+  ipcMain.handle('personas:list', async (_, activeOnly?: boolean) => {
+    return PersonaManager.getAll(activeOnly ?? true);
+  });
+
+  ipcMain.handle('personas:get', async (_, id: string) => {
+    return PersonaManager.getById(id);
+  });
+
+  ipcMain.handle('personas:create', async (_, data) => {
+    return PersonaManager.create(data);
+  });
+
+  ipcMain.handle('personas:update', async (_, id: string, updates) => {
+    const success = PersonaManager.update(id, updates);
+    return { success };
+  });
+
+  ipcMain.handle('personas:delete', async (_, id: string) => {
+    const success = PersonaManager.delete(id);
+    return { success };
+  });
+
+  ipcMain.handle('personas:setDefault', async (_, id: string) => {
+    PersonaManager.setDefault(id);
+    return { success: true };
+  });
+
+  ipcMain.handle('personas:seed', async (_, answers?) => {
+    PersonaManager.seedDefaults(answers);
+    return { success: true };
+  });
+
+  ipcMain.handle('personas:getKeywords', async (_, personaId: string) => {
+    if (!memory) return [];
+    return memory.getRoutingKeywords(personaId);
+  });
+
+  ipcMain.handle('personas:setKeywords', async (_, personaId: string, keywords: Array<{ keyword: string; weight?: number }>) => {
+    if (!memory) return { success: false };
+    memory.setRoutingKeywords(personaId, keywords);
+    return { success: true };
+  });
+
+  ipcMain.handle('app:openPersonas', async () => {
+    openPersonasWindow();
   });
 
   ipcMain.handle('app:openFactsGraph', async () => {
