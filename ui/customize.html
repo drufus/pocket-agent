@@ -190,6 +190,40 @@
       opacity: 0.7;
     }
 
+    .sidebar-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 12px 20px;
+    }
+
+    .rediscover-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      color: var(--accent);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+      font-family: 'Sora', sans-serif;
+    }
+
+    .rediscover-btn:hover {
+      background: rgba(168, 85, 247, 0.08);
+      color: var(--accent-hover);
+    }
+
+    .rediscover-btn svg {
+      width: 16px;
+      height: 16px;
+      opacity: 0.8;
+    }
+
     /* Content */
     .content {
       flex: 1;
@@ -718,6 +752,14 @@
         </svg>
         About You
       </div>
+      <div class="sidebar-divider"></div>
+      <button class="rediscover-btn" onclick="playNormalClick(); openDiscovery()" title="Re-run the identity interview">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        Re-discover Me
+      </button>
     </nav>
 
     <main class="content">
@@ -1014,6 +1056,15 @@
     }
 
     // Restart agent
+    async function openDiscovery() {
+      try {
+        await window.pocketAgent.openDiscovery();
+      } catch (err) {
+        console.error('Failed to open discovery:', err);
+        showToast('Failed to open interview', 'error');
+      }
+    }
+
     async function restartAgent() {
       const btn = document.getElementById('reboot-btn');
       if (btn && btn.disabled) return;
