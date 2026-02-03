@@ -1308,6 +1308,34 @@ function setupIPC(): void {
     return extractPdfText(base64Data);
   });
 
+  ipcMain.handle('discovery:ingestDocument', async (_, filename: string, text: string) => {
+    if (!memory) {
+      return { success: false, error: 'Memory not initialized' };
+    }
+
+    try {
+      const { ingestDocument, saveUploadedFile } = await import('../discovery');
+
+      // Save raw file to knowledge directory
+      let savedPath: string | null = null;
+      try {
+        savedPath = saveUploadedFile(filename, text);
+      } catch (err) {
+        console.warn('[Discovery] Failed to save raw file:', err);
+      }
+
+      // Chunk and ingest into facts
+      const result = await ingestDocument(filename, text, memory);
+      console.log(`[Discovery] Ingested "${filename}": ${result.chunksCreated} chunks created`);
+
+      return { success: true, chunksCreated: result.chunksCreated, savedPath };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[Discovery] Ingestion failed:', errorMsg);
+      return { success: false, error: errorMsg };
+    }
+  });
+
   ipcMain.handle('app:openFactsGraph', async () => {
     openFactsGraphWindow();
   });

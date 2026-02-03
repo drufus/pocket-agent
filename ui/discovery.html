@@ -1591,22 +1591,36 @@
       btn.innerHTML = '<span class="spinner"></span> Saving...';
 
       try {
-        // Save identity
+        // 1. Save identity
         await window.pocketAgent.saveIdentity(document.getElementById('review-identity').value);
 
-        // Save instructions
+        // 2. Save instructions
         await window.pocketAgent.saveInstructions(document.getElementById('review-instructions').value);
 
-        // Save profile settings
+        // 3. Save profile settings
         const b = interviewData.basics;
         if (b.name) await window.pocketAgent.setSetting('profile.name', b.name);
         if (b.location) await window.pocketAgent.setSetting('profile.location', b.location);
         if (b.timezone) await window.pocketAgent.setSetting('profile.timezone', b.timezone);
         if (b.occupation) await window.pocketAgent.setSetting('profile.occupation', b.occupation);
 
+        // 4. Ingest uploaded documents into knowledge base (RAG)
+        const docsWithText = interviewData.documents.filter(d => d.text && !d._processing);
+        if (docsWithText.length > 0) {
+          for (let i = 0; i < docsWithText.length; i++) {
+            const doc = docsWithText[i];
+            btn.innerHTML = `<span class="spinner"></span> Saving documents... (${i + 1}/${docsWithText.length})`;
+            try {
+              await window.pocketAgent.ingestDocument(doc.name, doc.text);
+            } catch (err) {
+              console.error('Failed to ingest document:', doc.name, err);
+            }
+          }
+        }
+
         showToast('Identity saved!', 'success');
 
-        // Restart and open chat
+        // 5. Restart and open chat
         await window.pocketAgent.restartAgent();
         await window.pocketAgent.openChat();
         window.close();

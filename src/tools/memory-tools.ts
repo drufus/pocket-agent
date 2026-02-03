@@ -29,7 +29,7 @@ Use this PROACTIVELY when the user shares:
 - Decisions or commitments made
 - Any fact they'd want you to recall later
 
-Categories: user_info, preferences, projects, people, work, notes, decisions
+Categories: user_info, preferences, projects, people, work, notes, decisions, knowledge
 
 Examples:
 - remember("user_info", "name", "John")
@@ -41,7 +41,7 @@ Examples:
       properties: {
         category: {
           type: 'string',
-          description: 'Category: user_info, preferences, projects, people, work, notes, decisions',
+          description: 'Category: user_info, preferences, projects, people, work, notes, decisions, knowledge',
         },
         subject: {
           type: 'string',

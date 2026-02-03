@@ -73,6 +73,7 @@ contextBridge.exposeInMainWorld('pocketAgent', {
   openDiscovery: () => ipcRenderer.invoke('app:openDiscovery'),
   synthesizeIdentity: (data: Record<string, unknown>) => ipcRenderer.invoke('discovery:synthesize', data),
   extractPdfText: (base64Data: string) => ipcRenderer.invoke('discovery:extractPdf', base64Data),
+  ingestDocument: (filename: string, text: string) => ipcRenderer.invoke('discovery:ingestDocument', filename, text),
 
   // Customize
   getIdentity: () => ipcRenderer.invoke('customize:getIdentity'),
@@ -202,6 +203,7 @@ declare global {
       openDiscovery: () => Promise<void>;
       synthesizeIdentity: (data: Record<string, unknown>) => Promise<{ identity: string; instructions: string }>;
       extractPdfText: (base64Data: string) => Promise<string>;
+      ingestDocument: (filename: string, text: string) => Promise<{ success: boolean; chunksCreated?: number; savedPath?: string | null; error?: string }>;
       // Customize
       getIdentity: () => Promise<string>;
       saveIdentity: (content: string) => Promise<{ success: boolean }>;

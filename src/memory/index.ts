@@ -1486,7 +1486,11 @@ export class MemoryManager {
       return this.factsContextCache;
     }
 
-    const facts = this.getAllFacts();
+    // Exclude knowledge chunks from system prompt context — they're only
+    // accessible via memory_search (hybrid RAG) to prevent context bloat
+    const facts = this.getAllFacts().filter(
+      f => f.category !== 'knowledge' && f.category !== 'knowledge_source'
+    );
     if (facts.length === 0) {
       this.factsContextCache = '';
       this.factsContextCacheValid = true;
