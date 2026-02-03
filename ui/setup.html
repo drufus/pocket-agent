@@ -670,7 +670,7 @@
       </div>
     </div>
 
-    <!-- Step 3: Success -->
+    <!-- Step 3: Success (fallback only — auth flows redirect to discovery automatically) -->
     <div class="step" id="step-success">
       <div class="success-icon">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
@@ -678,18 +678,7 @@
 
       <div class="success-text">
         <h2>keys saved!</h2>
-        <p>let me learn about you so I can be actually useful</p>
-      </div>
-
-      <div class="button-row" style="margin-top: 24px;">
-        <button class="primary" onclick="playNormalClick(); startDiscovery()">
-          Get to Know Me
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        </button>
-      </div>
-
-      <div class="skip-link">
-        <a onclick="playNormalClick(); finishSetup()">skip — I'll customize later</a>
+        <p>redirecting...</p>
       </div>
     </div>
   </div>
@@ -865,7 +854,7 @@
             await window.pocketAgent.setSetting('moonshot.apiKey', kimiKey);
           }
 
-          showStep('step-success');
+          startDiscovery();
         } else {
           statusDiv.innerHTML = `
             <div class="status error">
@@ -983,7 +972,7 @@
           await window.pocketAgent.setSetting('moonshot.apiKey', kimiKey);
         }
 
-        showStep('step-success');
+        startDiscovery();
 
       } catch (err) {
         statusDiv.innerHTML = `
