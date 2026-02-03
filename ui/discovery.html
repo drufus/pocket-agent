@@ -1,0 +1,1697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src https://api.anthropic.com;">
+  <title>Get to Know You - Pocket Agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@700&family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0a0a0b;
+      --bg-secondary: #141415;
+      --bg-tertiary: #1c1c1e;
+      --border: #2a2a2d;
+      --text-primary: #fafafa;
+      --text-secondary: #a1a1a6;
+      --text-muted: #636366;
+      --accent: #a855f7;
+      --accent-secondary: #ec4899;
+      --accent-hover: #c084fc;
+      --error: #ef4444;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Sora', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ---- Main container ---- */
+
+    .discovery {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 28px 36px 40px 36px;
+      overflow-y: auto;
+    }
+
+    .discovery::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .discovery::-webkit-scrollbar-track {
+      background: var(--bg-primary);
+    }
+
+    .discovery::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    .discovery::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    /* ---- Logo ---- */
+
+    .logo {
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 14px;
+      flex-shrink: 0;
+      animation: logoIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 8px 24px rgba(168, 85, 247, 0.3);
+    }
+
+    @keyframes logoIn {
+      from { opacity: 0; transform: scale(0.8) translateY(10px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .logo svg {
+      width: 28px;
+      height: 28px;
+      color: white;
+    }
+
+    /* ---- Header text ---- */
+
+    .discovery-title {
+      font-family: 'Pixelify Sans', sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 4px;
+      animation: textIn 0.5s ease 0.1s both;
+      background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .discovery-subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+      text-align: center;
+      margin-bottom: 24px;
+      animation: textIn 0.5s ease 0.15s both;
+    }
+
+    @keyframes textIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ---- Step indicator ---- */
+
+    .step-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 24px;
+      animation: textIn 0.5s ease 0.2s both;
+    }
+
+    .step-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: all 0.3s ease;
+    }
+
+    .step-dot.active {
+      background: var(--accent);
+      box-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+    }
+
+    .step-dot.completed {
+      background: var(--success);
+    }
+
+    .step-connector {
+      width: 32px;
+      height: 2px;
+      background: var(--border);
+      transition: background 0.3s ease;
+    }
+
+    .step-connector.completed {
+      background: var(--success);
+    }
+
+    /* ---- Wizard steps ---- */
+
+    .wizard-step {
+      display: none;
+      width: 100%;
+      max-width: 480px;
+      animation: stepSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .wizard-step.active {
+      display: block;
+    }
+
+    @keyframes stepSlide {
+      from { opacity: 0; transform: translateX(24px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .wizard-step h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .wizard-step .step-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+    }
+
+    /* ---- Form elements ---- */
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: var(--text-secondary);
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: 'Sora', sans-serif;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.15), 0 0 20px rgba(168, 85, 247, 0.1);
+    }
+
+    .form-group input::placeholder,
+    .form-group textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    .form-group select {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      padding-right: 36px;
+      cursor: pointer;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a1a1a6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 16px;
+    }
+
+    .form-group select option {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+    }
+
+    /* ---- Autocomplete ---- */
+
+    .autocomplete-wrapper {
+      position: relative;
+      width: 100%;
+    }
+
+    .autocomplete-wrapper input {
+      width: 100%;
+    }
+
+    .autocomplete-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+    }
+
+    .autocomplete-dropdown.show {
+      display: block;
+    }
+
+    .autocomplete-item {
+      padding: 10px 12px;
+      cursor: pointer;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s ease;
+    }
+
+    .autocomplete-item:last-child {
+      border-bottom: none;
+    }
+
+    .autocomplete-item:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .autocomplete-item .city {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .autocomplete-item .details {
+      color: var(--text-muted);
+      font-size: 11px;
+      margin-top: 2px;
+    }
+
+    /* ---- Section labels ---- */
+
+    .section-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      margin-top: 20px;
+    }
+
+    .section-label:first-child {
+      margin-top: 0;
+    }
+
+    /* ---- Option grid ---- */
+
+    .option-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .option-grid.two-col {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .option-item {
+      background: var(--bg-secondary);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+      user-select: none;
+    }
+
+    .option-item:hover {
+      border-color: rgba(168, 85, 247, 0.4);
+      background: var(--bg-tertiary);
+    }
+
+    .option-item.selected {
+      border-color: var(--accent);
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(236, 72, 153, 0.05) 100%);
+    }
+
+    .option-item .option-label {
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .option-item .option-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* ---- Wizard buttons ---- */
+
+    .wizard-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    .wizard-buttons button {
+      flex: 1;
+      padding: 12px 20px;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 600;
+      font-family: 'Sora', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 46px;
+    }
+
+    .wizard-buttons button.primary {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-secondary) 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
+    }
+
+    .wizard-buttons button.primary:hover:not(:disabled) {
+      background: linear-gradient(135deg, var(--accent-hover) 0%, var(--accent) 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(168, 85, 247, 0.4);
+    }
+
+    .wizard-buttons button.primary:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .wizard-buttons button.secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .wizard-buttons button.secondary:hover {
+      background: var(--border);
+      color: var(--text-primary);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .wizard-buttons button.secondary:active {
+      transform: translateY(0);
+    }
+
+    .wizard-buttons button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .wizard-buttons button svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* ---- Spinner ---- */
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid transparent;
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ---- Drop zone ---- */
+
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-secondary);
+      padding: 32px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-bottom: 16px;
+    }
+
+    .drop-zone:hover {
+      border-color: rgba(168, 85, 247, 0.4);
+      background: var(--bg-tertiary);
+    }
+
+    .drop-zone.dragover {
+      border-color: var(--accent);
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.08) 0%, rgba(236, 72, 153, 0.04) 100%);
+      box-shadow: 0 0 20px rgba(168, 85, 247, 0.1);
+    }
+
+    .drop-zone-icon {
+      margin-bottom: 10px;
+      color: var(--text-muted);
+    }
+
+    .drop-zone-icon svg {
+      width: 32px;
+      height: 32px;
+    }
+
+    .drop-zone-text {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .drop-zone-hint {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* ---- File list ---- */
+
+    .file-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+    }
+
+    .file-item-icon {
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .file-item-icon svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .file-item-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .file-item-name {
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-item-size {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .file-item-remove {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+      min-height: auto;
+    }
+
+    .file-item-remove:hover {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--error);
+    }
+
+    .file-item-remove svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .file-processing {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* ---- Identity preview ---- */
+
+    .preview-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      margin-bottom: 12px;
+      padding: 8px 0;
+      user-select: none;
+    }
+
+    .preview-toggle svg {
+      width: 16px;
+      height: 16px;
+      transition: transform 0.2s ease;
+    }
+
+    .preview-toggle.open svg {
+      transform: rotate(180deg);
+    }
+
+    .preview-content {
+      display: none;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+      max-height: 200px;
+      overflow-y: auto;
+      margin-bottom: 16px;
+    }
+
+    .preview-content.show {
+      display: block;
+      animation: slideDown 0.2s ease;
+    }
+
+    .preview-content::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .preview-content::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .preview-content::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ---- Review step ---- */
+
+    .review-section {
+      margin-bottom: 20px;
+    }
+
+    .review-section label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .review-section textarea {
+      width: 100%;
+      padding: 14px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      outline: none;
+      resize: vertical;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .review-section textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.15), 0 0 20px rgba(168, 85, 247, 0.1);
+    }
+
+    .review-section textarea::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .review-section textarea::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .review-section textarea::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    /* ---- Profile summary card ---- */
+
+    .profile-summary {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      padding: 14px 16px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-top: 16px;
+    }
+
+    .profile-summary-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .profile-summary-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    .profile-summary-value {
+      font-size: 13px;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    /* ---- Toast ---- */
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      min-width: 200px;
+      max-width: 360px;
+      background: rgba(28, 28, 30, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 14px 18px;
+      border-radius: 14px;
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: toastSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 1000;
+      overflow: hidden;
+      box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+      color: var(--text-primary);
+    }
+
+    .toast::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 3px;
+      width: 100%;
+      background: linear-gradient(90deg, var(--accent) 0%, var(--accent-secondary) 100%);
+      animation: toastProgress 3s linear forwards;
+      transform-origin: left;
+    }
+
+    .toast.success {
+      box-shadow:
+        0 8px 32px rgba(34, 197, 94, 0.15),
+        0 0 0 1px rgba(34, 197, 94, 0.2) inset,
+        0 0 20px rgba(34, 197, 94, 0.1);
+    }
+
+    .toast.success::before {
+      background: linear-gradient(90deg, #22c55e 0%, #4ade80 100%);
+    }
+
+    .toast.success .toast-icon {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(74, 222, 128, 0.1) 100%);
+      color: #4ade80;
+    }
+
+    .toast.error {
+      box-shadow:
+        0 8px 32px rgba(239, 68, 68, 0.15),
+        0 0 0 1px rgba(239, 68, 68, 0.2) inset,
+        0 0 20px rgba(239, 68, 68, 0.1);
+    }
+
+    .toast.error::before {
+      background: linear-gradient(90deg, #ef4444 0%, #f87171 100%);
+    }
+
+    .toast.error .toast-icon {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(248, 113, 113, 0.1) 100%);
+      color: #f87171;
+    }
+
+    .toast-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.2) 0%, rgba(236, 72, 153, 0.1) 100%);
+    }
+
+    .toast-icon svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .toast-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .toast-message {
+      color: var(--text-primary);
+      line-height: 1.4;
+    }
+
+    .toast.exiting {
+      animation: toastSlideOut 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
+    }
+
+    @keyframes toastSlideIn {
+      0% { transform: translateX(100%) scale(0.8); opacity: 0; }
+      100% { transform: translateX(0) scale(1); opacity: 1; }
+    }
+
+    @keyframes toastSlideOut {
+      0% { transform: translateX(0) scale(1); opacity: 1; }
+      100% { transform: translateX(100%) scale(0.8); opacity: 0; }
+    }
+
+    @keyframes toastProgress {
+      from { transform: scaleX(1); }
+      to { transform: scaleX(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="discovery">
+    <div class="logo">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+    </div>
+
+    <h1 class="discovery-title" id="discovery-title">The Basics</h1>
+    <p class="discovery-subtitle" id="discovery-subtitle">Quick stuff so I know who I'm talking to</p>
+
+    <div class="step-indicator" id="step-indicator">
+      <div class="step-dot active" id="dot-0"></div>
+      <div class="step-connector" id="conn-0"></div>
+      <div class="step-dot" id="dot-1"></div>
+      <div class="step-connector" id="conn-1"></div>
+      <div class="step-dot" id="dot-2"></div>
+      <div class="step-connector" id="conn-2"></div>
+      <div class="step-dot" id="dot-3"></div>
+      <div class="step-connector" id="conn-3"></div>
+      <div class="step-dot" id="dot-4"></div>
+    </div>
+
+    <!-- Step 0: The Basics -->
+    <div class="wizard-step active" id="wiz-0">
+      <div class="form-group">
+        <label for="basics-name">What should I call you?</label>
+        <input type="text" id="basics-name" placeholder="Your name" autofocus>
+      </div>
+      <div class="form-group">
+        <label for="basics-location">Where are you based?</label>
+        <div class="autocomplete-wrapper">
+          <input type="text" id="basics-location" placeholder="Start typing a city..." autocomplete="off">
+          <div class="autocomplete-dropdown" id="location-dropdown"></div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="basics-timezone">Timezone</label>
+        <select id="basics-timezone">
+          <option value="">Select timezone...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="basics-occupation">What do you do?</label>
+        <input type="text" id="basics-occupation" placeholder="Your role or profession">
+      </div>
+      <div class="form-group">
+        <label for="basics-company">Company or project</label>
+        <input type="text" id="basics-company" placeholder="Where you work or what you're building">
+      </div>
+      <div class="wizard-buttons">
+        <button class="primary" id="btn-next-0" disabled onclick="nextStep()">
+          Next
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 1: Your Story -->
+    <div class="wizard-step" id="wiz-1">
+      <div class="form-group">
+        <label for="story-background">Where are you from? What's your journey so far?</label>
+        <textarea id="story-background" rows="3" placeholder="Your background, experience, where you grew up..."></textarea>
+      </div>
+      <div class="form-group">
+        <label for="story-motivation">What drives you? What are you building?</label>
+        <textarea id="story-motivation" rows="3" placeholder="Your goals, passions, current projects..."></textarea>
+      </div>
+      <div class="form-group">
+        <label for="story-challenge">What's your current biggest challenge?</label>
+        <textarea id="story-challenge" rows="3" placeholder="What's keeping you up at night..."></textarea>
+      </div>
+      <div class="wizard-buttons">
+        <button class="secondary" onclick="prevStep()">Back</button>
+        <button class="primary" onclick="nextStep()">
+          Next
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 2: Communication Style -->
+    <div class="wizard-step" id="wiz-2">
+      <div class="section-label">Tone</div>
+      <div class="option-grid" id="tone-grid">
+        <div class="option-item" data-group="tone" data-value="casual">
+          <div class="option-label">Casual</div>
+          <div class="option-hint">keep it chill, like texting a friend</div>
+        </div>
+        <div class="option-item" data-group="tone" data-value="mixed">
+          <div class="option-label">Mixed</div>
+          <div class="option-hint">professional when needed, casual otherwise</div>
+        </div>
+        <div class="option-item" data-group="tone" data-value="professional">
+          <div class="option-label">Professional</div>
+          <div class="option-hint">clean, sharp, business-like</div>
+        </div>
+      </div>
+
+      <div class="section-label">What annoys you in AI responses?</div>
+      <div class="option-grid two-col" id="annoyance-grid">
+        <div class="option-item" data-group="annoyances" data-value="fluff">
+          <div class="option-label">Fluff</div>
+          <div class="option-hint">filler words and empty phrases</div>
+        </div>
+        <div class="option-item" data-group="annoyances" data-value="hedging">
+          <div class="option-label">Hedging</div>
+          <div class="option-hint">maybe, perhaps, it depends...</div>
+        </div>
+        <div class="option-item" data-group="annoyances" data-value="long_responses">
+          <div class="option-label">Long responses</div>
+          <div class="option-hint">walls of text when a sentence would do</div>
+        </div>
+        <div class="option-item" data-group="annoyances" data-value="repetition">
+          <div class="option-label">Repetition</div>
+          <div class="option-hint">restating what I just said</div>
+        </div>
+        <div class="option-item" data-group="annoyances" data-value="fake_positivity">
+          <div class="option-label">Fake positivity</div>
+          <div class="option-hint">Great question! I'd love to help!</div>
+        </div>
+        <div class="option-item" data-group="annoyances" data-value="over_explaining">
+          <div class="option-label">Over-explaining</div>
+          <div class="option-hint">explaining things I already know</div>
+        </div>
+      </div>
+
+      <div class="section-label">Detail level</div>
+      <div class="option-grid" id="detail-grid">
+        <div class="option-item" data-group="detail" data-value="brief">
+          <div class="option-label">Brief</div>
+          <div class="option-hint">short and punchy, skip the filler</div>
+        </div>
+        <div class="option-item" data-group="detail" data-value="balanced">
+          <div class="option-label">Balanced</div>
+          <div class="option-hint">enough detail without overdoing it</div>
+        </div>
+        <div class="option-item" data-group="detail" data-value="thorough">
+          <div class="option-label">Thorough</div>
+          <div class="option-hint">detailed explanations with examples</div>
+        </div>
+      </div>
+
+      <div class="wizard-buttons">
+        <button class="secondary" onclick="prevStep()">Back</button>
+        <button class="primary" id="btn-synthesize" onclick="triggerSynthesis()">
+          Build my identity
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="m6.34 6.34 2.83 2.83"/><path d="M2 12h4"/><path d="m17.66 6.34-2.83 2.83"/><path d="M22 12h-4"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 3: Upload Context -->
+    <div class="wizard-step" id="wiz-3">
+      <div class="drop-zone" id="drop-zone">
+        <div class="drop-zone-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </div>
+        <div class="drop-zone-text">Drop files here or click to browse</div>
+        <div class="drop-zone-hint">.txt .md .json .pdf</div>
+        <input type="file" id="file-input" accept=".txt,.md,.json,.pdf" multiple hidden>
+      </div>
+
+      <div class="file-list" id="file-list"></div>
+
+      <div class="preview-toggle" id="preview-toggle" onclick="togglePreview()" style="display: none;">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        <span id="preview-toggle-text">Show preview</span>
+      </div>
+      <div class="preview-content" id="preview-content"></div>
+
+      <div class="wizard-buttons">
+        <button class="secondary" onclick="prevStep()">Back</button>
+        <button class="secondary" onclick="skipDocuments()">Skip</button>
+        <button class="primary" id="btn-resynthesize" onclick="resynthesizeWithDocs()" style="display: none;">
+          Add to identity
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 4: Review & Save -->
+    <div class="wizard-step" id="wiz-4">
+      <div class="review-section">
+        <label for="review-identity">Identity</label>
+        <textarea id="review-identity" rows="12"></textarea>
+      </div>
+
+      <div class="review-section">
+        <label for="review-instructions">Instructions</label>
+        <textarea id="review-instructions" rows="8"></textarea>
+      </div>
+
+      <div class="profile-summary" id="profile-summary"></div>
+
+      <div class="wizard-buttons">
+        <button class="secondary" onclick="prevStep()">Back</button>
+        <button class="primary" onclick="saveAndFinish()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Save & Start Chatting
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Click Sound -->
+  <audio id="normal-click-sound" preload="auto" src="../assets/normal-click.mp3"></audio>
+
+  <script>
+    // -----------------------------------------------------------------------
+    // Click sound
+    // -----------------------------------------------------------------------
+    const normalClickSound = document.getElementById('normal-click-sound');
+    function playNormalClick() {
+      if (normalClickSound) {
+        normalClickSound.currentTime = 0;
+        normalClickSound.play().catch(() => {});
+      }
+    }
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('button, .option-item, select, .preview-toggle, .drop-zone')) {
+        playNormalClick();
+      }
+    });
+
+    // -----------------------------------------------------------------------
+    // State
+    // -----------------------------------------------------------------------
+    let currentStep = 0;
+    const TOTAL_STEPS = 5;
+    const interviewData = {
+      basics: { name: '', location: '', timezone: '', occupation: '', company: '' },
+      story: { background: '', motivation: '', challenge: '' },
+      communication: { tone: null, annoyances: [], detailLevel: null },
+      documents: [],
+      generatedIdentity: '',
+      generatedInstructions: '',
+    };
+
+    const stepTitles = [
+      { title: 'The Basics', subtitle: 'Quick stuff so I know who I\'m talking to' },
+      { title: 'Your Story', subtitle: 'So I understand where you\'re coming from' },
+      { title: 'How should I talk to you?', subtitle: 'So I don\'t annoy you from day one' },
+      { title: 'Got documents that show who you are?', subtitle: 'Meeting notes, transcripts, bios... totally optional' },
+      { title: 'Review & Save', subtitle: 'Edit anything before I commit this to memory' },
+    ];
+
+    let locationLookupTimeout = null;
+
+    // -----------------------------------------------------------------------
+    // Step navigation
+    // -----------------------------------------------------------------------
+    function showStep(n) {
+      // Hide all steps
+      for (let i = 0; i < TOTAL_STEPS; i++) {
+        const step = document.getElementById(`wiz-${i}`);
+        if (step) step.classList.remove('active');
+      }
+
+      // Show target step
+      const target = document.getElementById(`wiz-${n}`);
+      if (target) target.classList.add('active');
+
+      // Update step dots
+      for (let i = 0; i < TOTAL_STEPS; i++) {
+        const dot = document.getElementById(`dot-${i}`);
+        if (!dot) continue;
+        dot.classList.remove('active', 'completed');
+        if (i < n) dot.classList.add('completed');
+        if (i === n) dot.classList.add('active');
+      }
+
+      // Update step connectors
+      for (let i = 0; i < TOTAL_STEPS - 1; i++) {
+        const conn = document.getElementById(`conn-${i}`);
+        if (!conn) continue;
+        conn.classList.toggle('completed', i < n);
+      }
+
+      // Update title and subtitle
+      document.getElementById('discovery-title').textContent = stepTitles[n].title;
+      document.getElementById('discovery-subtitle').textContent = stepTitles[n].subtitle;
+
+      // Scroll to top
+      document.querySelector('.discovery').scrollTop = 0;
+
+      currentStep = n;
+    }
+
+    function collectCurrentStepData() {
+      if (currentStep === 0) {
+        interviewData.basics.name = document.getElementById('basics-name').value.trim();
+        interviewData.basics.location = document.getElementById('basics-location').value.trim();
+        interviewData.basics.timezone = document.getElementById('basics-timezone').value;
+        interviewData.basics.occupation = document.getElementById('basics-occupation').value.trim();
+        interviewData.basics.company = document.getElementById('basics-company').value.trim();
+      } else if (currentStep === 1) {
+        interviewData.story.background = document.getElementById('story-background').value.trim();
+        interviewData.story.motivation = document.getElementById('story-motivation').value.trim();
+        interviewData.story.challenge = document.getElementById('story-challenge').value.trim();
+      }
+      // Step 2 data is collected via option click handlers
+    }
+
+    function nextStep() {
+      collectCurrentStepData();
+
+      if (currentStep === 0 && !interviewData.basics.name) {
+        showToast('Please enter your name', 'error');
+        return;
+      }
+
+      if (currentStep < TOTAL_STEPS - 1) {
+        showStep(currentStep + 1);
+      }
+    }
+
+    function prevStep() {
+      collectCurrentStepData();
+      if (currentStep > 0) {
+        showStep(currentStep - 1);
+      }
+    }
+
+    function skipDocuments() {
+      showStep(4);
+      populateReview();
+    }
+
+    // -----------------------------------------------------------------------
+    // Step 0: Name validation for Next button
+    // -----------------------------------------------------------------------
+    document.getElementById('basics-name').addEventListener('input', (e) => {
+      const btn = document.getElementById('btn-next-0');
+      btn.disabled = e.target.value.trim().length === 0;
+    });
+
+    // -----------------------------------------------------------------------
+    // Step 0: Location autocomplete
+    // -----------------------------------------------------------------------
+    function setupLocationAutocomplete() {
+      const input = document.getElementById('basics-location');
+      const dropdown = document.getElementById('location-dropdown');
+
+      input.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+
+        if (locationLookupTimeout) {
+          clearTimeout(locationLookupTimeout);
+        }
+
+        if (query.length < 2) {
+          dropdown.classList.remove('show');
+          return;
+        }
+
+        locationLookupTimeout = setTimeout(async () => {
+          try {
+            const results = await window.pocketAgent.lookupLocation(query);
+
+            if (!results || results.length === 0) {
+              dropdown.classList.remove('show');
+              return;
+            }
+
+            dropdown.innerHTML = results.map(r => `
+              <div class="autocomplete-item" data-display="${escapeAttr(r.display)}" data-timezone="${escapeAttr(r.timezone)}">
+                <div class="city">${escapeHtml(r.city)}</div>
+                <div class="details">${r.province ? escapeHtml(r.province) + ', ' : ''}${escapeHtml(r.country)} - ${escapeHtml(r.timezone)}</div>
+              </div>
+            `).join('');
+
+            dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+              item.addEventListener('click', () => {
+                input.value = item.dataset.display;
+                const timezoneSelect = document.getElementById('basics-timezone');
+                timezoneSelect.value = item.dataset.timezone;
+                interviewData.basics.location = item.dataset.display;
+                interviewData.basics.timezone = item.dataset.timezone;
+                dropdown.classList.remove('show');
+              });
+            });
+
+            dropdown.classList.add('show');
+          } catch (error) {
+            console.error('Error looking up location:', error);
+          }
+        }, 300);
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+          dropdown.classList.remove('show');
+        }
+      });
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          dropdown.classList.remove('show');
+        }
+      });
+    }
+
+    async function loadTimezones() {
+      try {
+        const timezones = await window.pocketAgent.getTimezones();
+        const select = document.getElementById('basics-timezone');
+
+        const grouped = {};
+        timezones.forEach(tz => {
+          const [region] = tz.split('/');
+          if (!grouped[region]) grouped[region] = [];
+          grouped[region].push(tz);
+        });
+
+        Object.keys(grouped).sort().forEach(region => {
+          const optgroup = document.createElement('optgroup');
+          optgroup.label = region;
+          grouped[region].sort().forEach(tz => {
+            const option = document.createElement('option');
+            option.value = tz;
+            option.textContent = tz.replace(/_/g, ' ');
+            optgroup.appendChild(option);
+          });
+          select.appendChild(optgroup);
+        });
+      } catch (error) {
+        console.error('Error loading timezones:', error);
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // Step 2: Option selection
+    // -----------------------------------------------------------------------
+    document.querySelectorAll('.option-item').forEach(item => {
+      item.addEventListener('click', () => handleOptionClick(item));
+    });
+
+    function handleOptionClick(item) {
+      const group = item.dataset.group;
+      const value = item.dataset.value;
+
+      if (group === 'tone') {
+        // Single select
+        document.querySelectorAll('[data-group="tone"]').forEach(o => o.classList.remove('selected'));
+        item.classList.add('selected');
+        interviewData.communication.tone = value;
+      } else if (group === 'annoyances') {
+        // Multi select
+        item.classList.toggle('selected');
+        const selected = document.querySelectorAll('[data-group="annoyances"].selected');
+        interviewData.communication.annoyances = Array.from(selected).map(s => s.dataset.value);
+      } else if (group === 'detail') {
+        // Single select
+        document.querySelectorAll('[data-group="detail"]').forEach(o => o.classList.remove('selected'));
+        item.classList.add('selected');
+        interviewData.communication.detailLevel = value;
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // Step 2 -> 3: Synthesis
+    // -----------------------------------------------------------------------
+    async function triggerSynthesis() {
+      collectCurrentStepData();
+
+      const btn = document.getElementById('btn-synthesize');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Crafting your identity...';
+
+      try {
+        const result = await window.pocketAgent.synthesizeIdentity({
+          basics: interviewData.basics,
+          story: interviewData.story,
+          communication: interviewData.communication,
+        });
+
+        interviewData.generatedIdentity = result.identity;
+        interviewData.generatedInstructions = result.instructions;
+
+        showStep(3);
+        updatePreview();
+
+      } catch (error) {
+        console.error('Synthesis failed:', error);
+        showToast('Failed to generate identity: ' + (error.message || 'Unknown error'), 'error');
+      }
+
+      btn.disabled = false;
+      btn.innerHTML = `Build my identity <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="m6.34 6.34 2.83 2.83"/><path d="M2 12h4"/><path d="m17.66 6.34-2.83 2.83"/><path d="M22 12h-4"/></svg>`;
+    }
+
+    // -----------------------------------------------------------------------
+    // Step 3: File handling
+    // -----------------------------------------------------------------------
+    function setupDropZone() {
+      const dropZone = document.getElementById('drop-zone');
+      const fileInput = document.getElementById('file-input');
+
+      dropZone.addEventListener('click', () => fileInput.click());
+
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.add('dragover');
+      });
+
+      dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.remove('dragover');
+      });
+
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length > 0) {
+          handleFiles(e.dataTransfer.files);
+        }
+      });
+
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+          handleFiles(e.target.files);
+        }
+        fileInput.value = '';
+      });
+    }
+
+    function arrayBufferToBase64(buffer) {
+      const bytes = new Uint8Array(buffer);
+      const chunkSize = 8192;
+      let binary = '';
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.subarray(i, i + chunkSize);
+        binary += String.fromCharCode.apply(null, chunk);
+      }
+      return btoa(binary);
+    }
+
+    async function handleFiles(fileList) {
+      for (const file of fileList) {
+        // Check for valid extension
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (!['txt', 'md', 'json', 'pdf'].includes(ext)) {
+          showToast('Unsupported file type: .' + ext, 'error');
+          continue;
+        }
+
+        // Show processing state
+        const tempId = 'processing-' + Date.now() + '-' + Math.random();
+        interviewData.documents.push({
+          name: file.name,
+          size: file.size,
+          text: null,
+          _processing: true,
+          _tempId: tempId,
+        });
+        renderFileList();
+
+        try {
+          let text;
+          if (file.name.endsWith('.pdf')) {
+            const buf = await file.arrayBuffer();
+            const b64 = arrayBufferToBase64(buf);
+            text = await window.pocketAgent.extractPdfText(b64);
+          } else if (file.name.endsWith('.json')) {
+            text = await file.text();
+          } else {
+            text = await file.text();
+          }
+
+          // Update the document entry
+          const doc = interviewData.documents.find(d => d._tempId === tempId);
+          if (doc) {
+            doc.text = text;
+            doc._processing = false;
+          }
+        } catch (error) {
+          console.error('Error processing file:', error);
+          // Remove the failed entry
+          interviewData.documents = interviewData.documents.filter(d => d._tempId !== tempId);
+          showToast('Failed to process ' + file.name, 'error');
+        }
+
+        renderFileList();
+      }
+    }
+
+    function renderFileList() {
+      const container = document.getElementById('file-list');
+      const resynthBtn = document.getElementById('btn-resynthesize');
+
+      if (interviewData.documents.length === 0) {
+        container.innerHTML = '';
+        resynthBtn.style.display = 'none';
+        return;
+      }
+
+      const hasReady = interviewData.documents.some(d => !d._processing);
+      resynthBtn.style.display = hasReady ? '' : 'none';
+
+      container.innerHTML = interviewData.documents.map((doc, i) => `
+        <div class="file-item">
+          <div class="file-item-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          <div class="file-item-info">
+            <div class="file-item-name">${escapeHtml(doc.name)}</div>
+            <div class="file-item-size">${doc._processing
+              ? '<span class="file-processing"><span class="spinner" style="width:12px;height:12px;"></span> Processing...</span>'
+              : formatFileSize(doc.size)
+            }</div>
+          </div>
+          <button class="file-item-remove" onclick="removeFile(${i})" title="Remove">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function removeFile(index) {
+      interviewData.documents.splice(index, 1);
+      renderFileList();
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    async function resynthesizeWithDocs() {
+      const btn = document.getElementById('btn-resynthesize');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Re-synthesizing...';
+
+      try {
+        const docTexts = interviewData.documents
+          .filter(d => d.text)
+          .map(d => d.text)
+          .join('\n\n---\n\n');
+
+        const result = await window.pocketAgent.synthesizeIdentity({
+          basics: interviewData.basics,
+          story: interviewData.story,
+          communication: interviewData.communication,
+          documentTexts: docTexts,
+        });
+
+        interviewData.generatedIdentity = result.identity;
+        interviewData.generatedInstructions = result.instructions;
+        updatePreview();
+        showStep(4);
+        populateReview();
+      } catch (error) {
+        console.error('Re-synthesis failed:', error);
+        showToast('Failed to re-synthesize: ' + (error.message || 'Unknown error'), 'error');
+      }
+
+      btn.disabled = false;
+      btn.innerHTML = `Add to identity <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
+    }
+
+    // -----------------------------------------------------------------------
+    // Preview
+    // -----------------------------------------------------------------------
+    function updatePreview() {
+      const previewContent = document.getElementById('preview-content');
+      const previewToggle = document.getElementById('preview-toggle');
+
+      if (interviewData.generatedIdentity) {
+        previewToggle.style.display = 'flex';
+        previewContent.textContent = interviewData.generatedIdentity;
+      }
+    }
+
+    function togglePreview() {
+      const toggle = document.getElementById('preview-toggle');
+      const content = document.getElementById('preview-content');
+      const text = document.getElementById('preview-toggle-text');
+
+      toggle.classList.toggle('open');
+      content.classList.toggle('show');
+      text.textContent = content.classList.contains('show') ? 'Hide preview' : 'Show preview';
+    }
+
+    // -----------------------------------------------------------------------
+    // Step 4: Review
+    // -----------------------------------------------------------------------
+    function populateReview() {
+      document.getElementById('review-identity').value = interviewData.generatedIdentity;
+      document.getElementById('review-instructions').value = interviewData.generatedInstructions;
+
+      // Build profile summary
+      const b = interviewData.basics;
+      const items = [];
+      if (b.name) items.push({ label: 'Name', value: b.name });
+      if (b.location) items.push({ label: 'Location', value: b.location });
+      if (b.occupation) items.push({ label: 'Occupation', value: b.occupation });
+      if (b.timezone) items.push({ label: 'Timezone', value: b.timezone });
+
+      const summary = document.getElementById('profile-summary');
+      if (items.length > 0) {
+        summary.innerHTML = items.map(item => `
+          <div class="profile-summary-item">
+            <span class="profile-summary-label">${escapeHtml(item.label)}</span>
+            <span class="profile-summary-value">${escapeHtml(item.value)}</span>
+          </div>
+        `).join('');
+        summary.style.display = 'flex';
+      } else {
+        summary.style.display = 'none';
+      }
+    }
+
+    // Also populate when navigating to step 4 via nextStep
+    const originalShowStep = showStep;
+    showStep = function(n) {
+      originalShowStep(n);
+      if (n === 4) {
+        populateReview();
+      }
+    };
+
+    // -----------------------------------------------------------------------
+    // Save & Finish
+    // -----------------------------------------------------------------------
+    async function saveAndFinish() {
+      const btn = event.currentTarget;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Saving...';
+
+      try {
+        // Save identity
+        await window.pocketAgent.saveIdentity(document.getElementById('review-identity').value);
+
+        // Save instructions
+        await window.pocketAgent.saveInstructions(document.getElementById('review-instructions').value);
+
+        // Save profile settings
+        const b = interviewData.basics;
+        if (b.name) await window.pocketAgent.setSetting('profile.name', b.name);
+        if (b.location) await window.pocketAgent.setSetting('profile.location', b.location);
+        if (b.timezone) await window.pocketAgent.setSetting('profile.timezone', b.timezone);
+        if (b.occupation) await window.pocketAgent.setSetting('profile.occupation', b.occupation);
+
+        showToast('Identity saved!', 'success');
+
+        // Restart and open chat
+        await window.pocketAgent.restartAgent();
+        await window.pocketAgent.openChat();
+        window.close();
+
+      } catch (error) {
+        console.error('Save failed:', error);
+        showToast('Failed to save: ' + (error.message || 'Unknown error'), 'error');
+        btn.disabled = false;
+        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Save & Start Chatting`;
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // Toast
+    // -----------------------------------------------------------------------
+    function showToast(message, type = 'success') {
+      const existing = document.querySelector('.toast');
+      if (existing) {
+        existing.classList.add('exiting');
+        setTimeout(() => existing.remove(), 300);
+      }
+
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.innerHTML = `
+        <div class="toast-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            ${type === 'success'
+              ? '<path d="M20 6L9 17l-5-5"/>'
+              : '<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>'}
+          </svg>
+        </div>
+        <div class="toast-content">
+          <div class="toast-message">${escapeHtml(message)}</div>
+        </div>
+      `;
+      document.body.appendChild(toast);
+
+      setTimeout(() => {
+        toast.classList.add('exiting');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // -----------------------------------------------------------------------
+    // Helpers
+    // -----------------------------------------------------------------------
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function escapeAttr(text) {
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    // -----------------------------------------------------------------------
+    // Keyboard shortcuts
+    // -----------------------------------------------------------------------
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        const activeEl = document.activeElement;
+        // Don't intercept Enter in textareas
+        if (activeEl && activeEl.tagName === 'TEXTAREA') return;
+
+        if (currentStep === 0 && interviewData.basics.name || document.getElementById('basics-name').value.trim()) {
+          nextStep();
+        } else if (currentStep === 1) {
+          nextStep();
+        }
+      }
+    });
+
+    // -----------------------------------------------------------------------
+    // Initialize
+    // -----------------------------------------------------------------------
+    loadTimezones();
+    setupLocationAutocomplete();
+    setupDropZone();
+  </script>
+</body>
+</html>

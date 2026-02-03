@@ -159,6 +159,7 @@ let factsWindow: BrowserWindow | null = null;
 let soulWindow: BrowserWindow | null = null;
 let skillsSetupWindow: BrowserWindow | null = null;
 let personasWindow: BrowserWindow | null = null;
+let discoveryWindow: BrowserWindow | null = null;
 let splashWindow: BrowserWindow | null = null;
 
 /**
@@ -1049,6 +1050,38 @@ function openPersonasWindow(): void {
   });
 }
 
+function openDiscoveryWindow(): void {
+  if (discoveryWindow && !discoveryWindow.isDestroyed()) {
+    discoveryWindow.focus();
+    return;
+  }
+
+  discoveryWindow = new BrowserWindow({
+    width: 700,
+    height: 750,
+    title: 'Get to Know You - Pocket Agent',
+    backgroundColor: '#0a0a0b',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+    show: false,
+    resizable: true,
+    minimizable: false,
+  });
+
+  discoveryWindow.loadFile(path.join(__dirname, '../../ui/discovery.html'));
+
+  discoveryWindow.once('ready-to-show', () => {
+    discoveryWindow?.show();
+  });
+
+  discoveryWindow.on('closed', () => {
+    discoveryWindow = null;
+  });
+}
+
 function showNotification(title: string, body: string): void {
   if (Notification.isSupported()) {
     new Notification({ title, body }).show();
@@ -1258,6 +1291,21 @@ function setupIPC(): void {
 
   ipcMain.handle('app:openPersonas', async () => {
     openPersonasWindow();
+  });
+
+  // Discovery / Deep Identity Interview
+  ipcMain.handle('app:openDiscovery', async () => {
+    openDiscoveryWindow();
+  });
+
+  ipcMain.handle('discovery:synthesize', async (_, data: Record<string, unknown>) => {
+    const { synthesizeIdentity } = await import('../discovery');
+    return synthesizeIdentity(data as unknown as Parameters<typeof synthesizeIdentity>[0]);
+  });
+
+  ipcMain.handle('discovery:extractPdf', async (_, base64Data: string) => {
+    const { extractPdfText } = await import('../discovery');
+    return extractPdfText(base64Data);
   });
 
   ipcMain.handle('app:openFactsGraph', async () => {

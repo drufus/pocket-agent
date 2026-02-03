@@ -69,6 +69,11 @@ contextBridge.exposeInMainWorld('pocketAgent', {
     return () => ipcRenderer.removeListener('agent:persona', listener);
   },
 
+  // Discovery
+  openDiscovery: () => ipcRenderer.invoke('app:openDiscovery'),
+  synthesizeIdentity: (data: Record<string, unknown>) => ipcRenderer.invoke('discovery:synthesize', data),
+  extractPdfText: (base64Data: string) => ipcRenderer.invoke('discovery:extractPdf', base64Data),
+
   // Customize
   getIdentity: () => ipcRenderer.invoke('customize:getIdentity'),
   saveIdentity: (content: string) => ipcRenderer.invoke('customize:saveIdentity', content),
@@ -193,6 +198,10 @@ declare global {
       openCustomize: () => Promise<void>;
       openRoutines: () => Promise<void>;
       openExternal: (url: string) => Promise<void>;
+      // Discovery
+      openDiscovery: () => Promise<void>;
+      synthesizeIdentity: (data: Record<string, unknown>) => Promise<{ identity: string; instructions: string }>;
+      extractPdfText: (base64Data: string) => Promise<string>;
       // Customize
       getIdentity: () => Promise<string>;
       saveIdentity: (content: string) => Promise<{ success: boolean }>;
